@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AfterWatch</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">THE CONVERSATION CONTINUES.</p>
+      <h1>AfterWatch</h1>
+      <p class="intro">You've watched it. Now join the conversation.</p>
+    </header>
+    <section class="film-card" aria-label="Movie selection">
+      <label for="filmTitle">Movie title to search</label>
+      <input id="filmTitle" type="text" maxlength="180" placeholder="e.g. Raw" autocomplete="off" spellcheck="false" aria-describedby="status filmDetail">
+      <p id="filmDetail" class="detail"></p>
+      <div id="alternatives" aria-label="Other titles found on this page"></div>
+      <p id="status" role="status" aria-live="polite">Reading movie information…</p>
+    </section>
+    <div class="destinations">
+      <button id="eksiBtn" class="destination eksi" type="button" disabled>
+        <span class="destination-name">Ekşi Sözlük <span aria-hidden="true">↗</span></span>
+        <span class="destination-description">Explore discussions in Turkish</span>
+      </button>
+      <button id="letterboxdBtn" class="destination letterboxd" type="button" disabled>
+        <span class="destination-name">Letterboxd <span aria-hidden="true">↗</span></span>
+        <span class="destination-description">Read reviews and rate on Letterboxd</span>
+        <span id="letterboxdRoute" class="route">Search by movie title</span>
+      </button>
+    </div>
+    <footer>Opens a new tab only when you click.<br>AfterWatch does not save your movie history.</footer>
+  </main>
+  <script src="film.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
