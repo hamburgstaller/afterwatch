@@ -14,7 +14,8 @@ const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(match => match[
 if (scripts.some(file => file.startsWith('dev/') || file.includes('://'))) throw new Error('Development or remote script in production');
 const required = [manifest.action.default_popup, 'popup.css', ...scripts, 'LICENSE', 'README.md', 'PRIVACY.md', 'SECURITY.md', 'CONTRIBUTING.md', 'ROADMAP.md', 'AUDIT.md'];
 for (const file of required) if (!fs.existsSync(path.join(root, file))) throw new Error(`Missing ${file}`);
-for (const file of [...scripts, 'dev/preview.js', 'dev/server.cjs', 'tests/film.test.cjs', 'tests/popup.test.cjs']) {
+if (!scripts.includes('i18n.js')) throw new Error('Missing local translation catalog');
+for (const file of [...scripts, 'dev/preview.js', 'dev/server.cjs', ...fs.readdirSync(path.join(root,'tests')).filter(file=>file.endsWith('.test.cjs')).map(file=>`tests/${file}`)]) {
   execFileSync(process.execPath, ['--check', path.join(root, file)], {stdio: 'pipe'});
 }
 console.log(`Release metadata and assets valid: ${manifest.name} ${manifest.version}; description ${manifest.description.length} characters`);

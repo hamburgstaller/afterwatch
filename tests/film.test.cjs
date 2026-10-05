@@ -75,7 +75,7 @@ function collectWith(scripts, options = {}) {
     querySelector:selector=>selector==='h1' ? heading : selector==='meta[property="og:type"]' ? {content:options.ogType||''} : null,
     querySelectorAll:selector=>selector.startsWith('script') ? scripts.map(textContent=>({textContent})) : []
   };
-  return vm.runInNewContext(`(${f.collectPageData.toString()})()`, {document, location:{hostname:options.host||'example.test',href:'https://example.test/film'}});
+  return vm.runInNewContext(`(${f.collectPageData.toString()})()`, {document, URL, location:{hostname:options.host||'example.test',href:'https://example.test/film'}});
 }
 test('Serialized collector handles graph, mainEntity, schema type arrays and malformed JSON', () => {
   const data = collectWith(['{broken', JSON.stringify({'@graph':[{'@type':'WebPage',mainEntity:{'@type':['Thing','Movie'],name:'Raw',sameAs:'https://imdb.com/title/tt4954522'}}]})]);
@@ -84,7 +84,7 @@ test('Serialized collector handles graph, mainEntity, schema type arrays and mal
 });
 test('Collector ignores recommendations and large payloads', () => {
   const data = collectWith([JSON.stringify({'@type':'ItemList',itemListElement:[{'@type':'Movie',name:'Raw'}]}), ' '.repeat(100001)]);
-  assert.equal(data.movies.length,0);
+  assert.equal(data.media.length,0);
 });
 test('Matching movie metadata enables a separate alternative heading on any hostname', () => {
   const scripts = [JSON.stringify({'@type':'Movie',name:'Mezar',datePublished:'2017-08-25',sameAs:'https://imdb.com/title/tt4954522/'})];
@@ -124,9 +124,87 @@ test('Unscoped IMDb links cannot supply an identity for a separate alternative h
 });
 test('Manifest stays minimal and all production assets exist', () => {
   const manifest = require('../manifest.json');
-  assert.deepEqual(manifest.permissions,['activeTab','scripting']);
+  assert.deepEqual(manifest.permissions,['activeTab','scripting','storage']);
   assert.equal(manifest.host_permissions,undefined);
   assert.equal(manifest.content_scripts,undefined);
   assert.match(manifest.content_security_policy.extension_pages,/connect-src 'none'/);
-  for (const file of ['popup.html','popup.css','film.js','popup.js']) assert.ok(fs.existsSync(path.join(__dirname,'..',file)));
+  for (const file of ['popup.html','popup.css','film.js','i18n.js','popup.js']) assert.ok(fs.existsSync(path.join(__dirname,'..',file)));
+});
+
+const tv = require('./fixtures/tv.json');
+test('TVSeries metadata preserves numbered titles and identifies the media type', () => {
+  const media = f.detectMedia(collectWith([JSON.stringify(tv.series)]));
+  assert.equal(media.type,'series');
+  assert.equal(media.title,'Example Series 2049');
+  assert.equal(media.year,'2020');
+  assert.equal(media.imdbId,'');
+});
+test('Episode graph references resolve the series, season and episode without mixing identities', () => {
+  const data = collectWith([JSON.stringify(tv.episode)]);
+  const media = f.detectMedia(data);
+  assert.equal(media.type,'episode');
+  assert.equal(media.title,'Example Series 2049');
+  assert.equal(media.episodeTitle,'A New Start');
+  assert.equal(media.season,'1');
+  assert.equal(media.episode,'2');
+  assert.equal(media.year,'2021');
+  assert.equal(media.imdbId,'');
+  assert.equal(f.destinationUrl('letterboxd',media.title,'tt1234567',media.type),'https://letterboxd.com/search/films/Example%20Series%202049/');
+});
+test('Nested season and legacy series relationships resolve correctly', () => {
+  const node = {'@type':'https://schema.org/TVEpisode',name:'Special',episodeNumber:'01',partOfSeason:{seasonNumber:0,partOfTVSeries:{name:'Example Show'}}};
+  const media = f.detectMedia(collectWith([JSON.stringify(node)]));
+  assert.equal(media.title,'Example Show');
+  assert.equal(media.season,'0');
+  assert.equal(media.episode,'1');
+});
+test('An episode and its referenced series are not mistaken for an ambiguous collection', () => {
+  const node = {'@graph':[{'@type':'TVSeries','@id':'#series',name:'Example Show'},{'@type':'TVEpisode',name:'Pilot',partOfSeries:{'@id':'#series'}}]};
+  assert.equal(f.detectMedia(collectWith([JSON.stringify(node)])).type,'episode');
+  node['@graph'].push({'@type':'TVSeries',name:'Another Show'});
+  assert.equal(f.detectMedia(collectWith([JSON.stringify(node)])).type,'');
+});
+test('Explicit mainEntity identifies a page among unrelated graph entries', () => {
+  const node = {'@graph':[{'@type':'WebPage',mainEntity:{'@id':'#current'}},{'@id':'#current','@type':'TVSeries',name:'Current Show'},{'@type':'Movie',name:'Another Movie'}]};
+  assert.equal(f.detectMedia(collectWith([JSON.stringify(node)])).title,'Current Show');
+  node['@graph'][0].mainEntity = [{'@id':'#current'},{'@type':'Movie',name:'Ambiguous Movie'}];
+  assert.equal(f.detectMedia(collectWith([JSON.stringify(node)])).type,'');
+});
+test('Repeated graph metadata does not create false ambiguity', () => {
+  assert.equal(f.detectMedia(collectWith([JSON.stringify(tv.series),JSON.stringify(tv.series)])).title,'Example Series 2049');
+});
+test('Missing episode parent leaves the series title blank instead of searching for an episode name', () => {
+  const media = f.detectMedia(collectWith([JSON.stringify({'@type':'TVEpisode',name:'Pilot',episodeNumber:1})]));
+  assert.equal(media.type,'episode');
+  assert.equal(media.title,'');
+  assert.equal(media.episodeTitle,'Pilot');
+});
+test('Cyclic and unresolved references do not hang or fetch remote records', () => {
+  const node = {'@graph':[{'@id':'#page','@type':'WebPage',mainEntity:{'@id':'#page'}},{'@type':'TVEpisode',name:'Pilot',partOfSeries:{'@id':'https://outside.example/series'}}]};
+  assert.equal(f.detectMedia(collectWith([JSON.stringify(node)])).title,'');
+});
+test('Open Graph TV evidence identifies series and episodes but cannot invent a series title', () => {
+  assert.equal(f.detectMedia({ogType:'video.tv_show',heading:'Example Show'}).type,'series');
+  const media = f.detectMedia({ogType:'video.episode',heading:'Pilot'});
+  assert.equal(media.type,'episode');
+  assert.equal(media.title,'');
+});
+test('Episode searches use destination-language numbering and validate missing or hostile numbers', () => {
+  assert.equal(new URL(f.destinationUrl('eksi','Example Show','','episode',{scope:'episode',season:'01',episode:'2'})).searchParams.get('q'),'Example Show 1. sezon 2. bölüm');
+  assert.equal(f.discussionQuery('Example Show','episode',{scope:'series'}),'Example Show');
+  assert.equal(f.discussionQuery('Example Show','episode',{scope:'episode',season:0,episode:1}),'Example Show 0. sezon 1. bölüm');
+  for (const season of ['',-1,'1.5','Infinity','<img>',1000]) assert.throws(()=>f.discussionQuery('Example Show','episode',{scope:'episode',season,episode:1}));
+  for (const episode of ['',0,-1,'1.5','1 OR 1',10000]) assert.throws(()=>f.discussionQuery('Example Show','episode',{scope:'episode',season:1,episode}));
+  assert.throws(()=>f.destinationUrl('letterboxd','Title','','unknown'));
+});
+test('Malformed media collections fall back safely to manual entry', () => {
+  for (const data of [null,undefined,{}, {movies:{}}, {media:[null,{}, {type:'unknown'}]}]) assert.equal(f.detectMedia(data).title,'');
+});
+test('Relative, absolute and cross-script JSON-LD references resolve to the same local record', () => {
+  const episode={'@type':'TVEpisode',name:'Pilot',episodeNumber:1,partOfSeason:{'@id':'#season'}};
+  const parents={'@graph':[{'@type':'TVSeason','@id':'https://example.test/film#season',seasonNumber:2,partOfSeries:'#series'}, {'@type':'TVSeries','@id':'https://example.test/film#series',name:'Example Show'}]};
+  const media=f.detectMedia(collectWith([JSON.stringify(episode),JSON.stringify(parents)]));
+  assert.equal(media.type,'episode');
+  assert.equal(media.title,'Example Show');
+  assert.equal(media.season,'2');
 });

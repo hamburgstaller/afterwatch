@@ -1,14 +1,27 @@
 # Roadmap
 
-These are future proposals, not features of the current release.
+The first section records work delivered in version 1.1.0. Remaining sections are future proposals.
 
-## Next: TV and episode support
+## Available in 1.1.0: TV, episodes, and languages
 
-Read TVSeries and TVEpisode metadata where available. Identify a series separately from a season or episode, so conversations can have clear spoiler boundaries. Show the detected media type and allow users to correct ambiguous matches. Add site-specific adapters only when standard metadata is insufficient.
+Movie, TVSeries, and TVEpisode metadata are supported, including local graph references and series/season relationships. Users can correct the media type, title, season, and episode. Ekşi offers series-wide and episode-specific searches; neither guarantees spoiler-free discussions. Letterboxd TV searches include an availability notice.
 
-## Later: language and destinations
+English remains the default interface, with Spanish, Portuguese, Italian, and Turkish available through a saved local preference. Media titles and destination-site content are not translated.
 
-Keep English as the default interface. Add Turkish through a localization layer rather than duplicating popup logic. Consider other discussion/review destinations that make sense for the selected media type.
+## Next: detection coverage and destinations
+
+Add more fixtures from standard movie/TV detail layouts and improve ambiguous metadata handling. Consider additional discussion/review destinations suited to TV content. Add site-specific adapters only when standard metadata is insufficient, with scoped selectors and regression tests. External title lookup needs a separate privacy and API-usage design.
+
+## Proposed: date-based navigation within a series discussion
+
+For destinations that discuss episodes under a single series topic, prefer that main topic over assuming that every episode has its own topic. A future Ekşi action could find comments around a season premiere or an episode's first air date.
+
+1. Resolve the series, season, and episode; use the episode's air date rather than the series' first-release year. Allow users to correct the date and discussion window.
+2. Find the canonical series topic, then validate the destination's current date-filter and entry-link behavior before relying on it.
+3. Where possible, combine a date window with episode-number or episode-title markers. Comments may be posted late, and multiple episodes can share one release date.
+4. Link to a verified matching entry when available; avoid treating a stored page number as a permanent position. Fall back to the main topic or an explicit search if matching fails.
+
+This would help users reach relevant discussion, but it cannot guarantee that a comment concerns the selected episode or is spoiler-free. Other destinations need their own navigation rules. External air-date lookup or destination-page processing requires a separate permission, privacy, and usage-terms design. Version 1.1.0 does not implement date lookup, filtering, or entry matching.
 
 ## Proposed: shared live rooms created on demand
 

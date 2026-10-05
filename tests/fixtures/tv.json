@@ -1,0 +1,18 @@
+{
+  "series": {
+    "@type": "TVSeries",
+    "@id": "#series",
+    "name": "Example Series 2049",
+    "alternateName": "Example Series",
+    "datePublished": "2020-01-01",
+    "sameAs": "https://www.imdb.com/title/tt1234567/"
+  },
+  "episode": {
+    "@graph": [
+      {"@type": "WebPage", "mainEntity": {"@id": "#episode"}},
+      {"@type": "TVEpisode", "@id": "#episode", "name": "A New Start", "datePublished": "2021-02-01", "episodeNumber": "02", "partOfSeason": {"@id": "#season"}, "sameAs": "https://www.imdb.com/title/tt7654321/"},
+      {"@type": "TVSeason", "@id": "#season", "seasonNumber": "01", "partOfSeries": {"@id": "#series"}},
+      {"@type": "TVSeries", "@id": "#series", "name": "Example Series 2049", "alternateName": "Example Series", "datePublished": "2020-01-01", "sameAs": "https://www.imdb.com/title/tt1234567/"}
+    ]
+  }
+}
