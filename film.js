@@ -18,6 +18,15 @@ function collectPageData() {
   }
   const names = value => (Array.isArray(value) ? value : [value])
     .filter(item => typeof item === 'string').slice(0, 6).map(text);
+  const samePage = value => {
+    if (!text(value).trim()) return false;
+    try {
+      const url = new URL(text(value), location.href);
+      const current = new URL(location.href);
+      return /^https?:$/.test(url.protocol) && url.origin === current.origin &&
+        url.pathname.replace(/\/$/, '') === current.pathname.replace(/\/$/, '');
+    } catch { return false; }
+  };
   const idKey = value => {
     if (!text(value)) return '';
     try { return new URL(text(value), location.href).href; } catch { return text(value); }
@@ -33,6 +42,10 @@ function collectPageData() {
     if (id) nodes.set(id, {...nodes.get(id), ...node});
     // Follow only identity relationships, never recommendations, cast or episode lists.
     for (const key of ['@graph', 'mainEntity', 'partOfSeries', 'partOfTVSeries', 'partOfSeason']) index(node[key], depth + 1);
+    // Review metadata is usable only when the reviewed item explicitly identifies this page.
+    const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+    if (types.some(type => typeof type === 'string' && type.split(/[/#]/).pop() === 'Review') &&
+      samePage(node.itemReviewed?.url)) index(node.itemReviewed, depth + 1);
   };
   documents.forEach(node => index(node));
   const resolve = value => {
@@ -70,16 +83,48 @@ function collectPageData() {
       const season = resolve(node.partOfSeason);
       const series = resolve(node.partOfSeries || node.partOfTVSeries || season?.partOfSeries || season?.partOfTVSeries);
       media.push({...summary(node), type, primary, series:summary(series),
-        season:number(season?.seasonNumber), episode:number(node.episodeNumber)});
+        season:number(season?.seasonNumber ?? node.seasonNumber), episode:number(node.episodeNumber)});
     }
     walk(node['@graph'], depth + 1, primary);
     walk(node.mainEntity, depth + 1, true);
+    const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+    if (types.some(type => typeof type === 'string' && type.split(/[/#]/).pop() === 'Review') &&
+      samePage(node.itemReviewed?.url)) walk(node.itemReviewed, depth + 1);
   };
   documents.forEach(node => walk(node));
+  // MUBI exposes its current film in a bounded, page-embedded Next.js record.
+  // Read that exact record only; never traverse recommendations or infer a title from its slug.
+  if (/^(?:www\.)?mubi\.com$/i.test(location.hostname) && meta('meta[property="og:type"]') === 'video.movie') {
+    try {
+      const path = location.pathname.match(/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/){0,2}films\/([^/]+)\/?$/i);
+      const script = document.querySelector('script#__NEXT_DATA__');
+      if (path && script?.type === 'application/json' && script.textContent.length <= 250000) {
+        const film = JSON.parse(script.textContent)?.props?.pageProps?.initFilm;
+        const normalized = value => text(value).normalize('NFC').replace(/\s+/g, ' ').trim();
+        const mainTitle = normalized(headingCopy?.textContent);
+        const title = normalized(film?.title);
+        const matches = value => normalized(value).toLocaleLowerCase('tr') === title.toLocaleLowerCase('tr');
+        if (title && title.length <= 180 && mainTitle && typeof film.slug === 'string' && decodeURIComponent(path[1]) === film.slug &&
+          (mainTitle === normalized(film.title_upcase) || matches(mainTitle))) {
+          const alternateNames = names(film.original_title);
+          const date = /^(?:18|19|20|21)\d{2}$/.test(String(film.year)) ? String(film.year) : '';
+          if (!media.length) media.push({type:'movie',primary:false,id:'',name:title,alternateNames,date,sameAs:[],url:''});
+          else if (media.length === 1 && media[0].type === 'movie' &&
+            [title,...alternateNames].some(name => normalized(name).toLocaleLowerCase('tr') === normalized(media[0].name).toLocaleLowerCase('tr')) &&
+            (!date || !media[0].date || media[0].date.slice(0,4) === date)) {
+            const movie = media[0];
+            movie.alternateNames = names([movie.name,...movie.alternateNames,...alternateNames]);
+            movie.name = title;
+            movie.date ||= date;
+          }
+        }
+      }
+    } catch { /* Invalid, missing or mismatched data leaves ordinary detection/manual entry intact. */ }
+  }
   return { heading: text(headingCopy?.textContent),
     alternateHeading: text(small?.textContent), pageTitle: text(document.title),
     ogTitle: meta('meta[property="og:title"]'), ogType: meta('meta[property="og:type"]'),
-    media };
+    pathname: text(location.pathname), media };
 }
 
 function normalizeText(value) {
@@ -119,6 +164,54 @@ function episodeNumber(value, season = false) {
   if (!/^\d{1,4}$/.test(string)) return '';
   const number = Number(string);
   return number >= (season ? 0 : 1) && number <= (season ? 999 : 9999) ? String(number) : '';
+}
+
+function episodePattern(value) {
+  const title = cleanTitle(value);
+  const patterns = [
+    /^(.+?)\s+(\d{1,4})\.?\s*sezon\s+(\d{1,4})\.?\s*b[öo]l[üu]m$/iu,
+    /^(.+?)\s+(?:season|temporada|stagione)\s*(\d{1,4})\s*[,.:–—-]?\s*(?:episode|episodio|episódio|capítulo|capitulo)\s*(\d{1,4})$/iu,
+    /^(.+?)\s+(?:S(\d{1,4})\s*E(\d{1,4})|(\d{1,4})x(\d{1,4}))$/iu
+  ];
+  for (const pattern of patterns) {
+    const match = title.match(pattern);
+    if (!match) continue;
+    const name = cleanTitle(match[1]);
+    const season = episodeNumber(match[2] ?? match[4], true);
+    const episode = episodeNumber(match[3] ?? match[5]);
+    if (isValidTitle(name) && season !== '' && episode !== '') return {title:name,season,episode};
+  }
+  return null;
+}
+
+function titleSlug(value) {
+  return normalizeText(value).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
+    .replace(/ı/g, 'i').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+}
+
+function episodeFromPage(data, metadataTitles, season, episode) {
+  const patterns = [data.heading, data.ogTitle, data.pageTitle].map(episodePattern).filter(Boolean);
+  let pathPattern;
+  try {
+    // Read only the last path segment; never query parameters, fragments or other page links.
+    const segment = decodeURIComponent(String(data.pathname || '').slice(0,2000).split('/').filter(Boolean).pop() || '');
+    const match = segment.match(/^(.+?)-(?:s(\d{1,4})e(\d{1,4})|(\d{1,4})-sezon-(\d{1,4})-bolum|(?:season|temporada|stagione)-(\d{1,4})-(?:episode|episodio|capitulo)-(\d{1,4}))(?:-(?:\d+-)?(?:izle|watch)(?:-\d+)?)?$/iu);
+    if (match) {
+      const s = episodeNumber(match[2] ?? match[4] ?? match[6], true);
+      const e = episodeNumber(match[3] ?? match[5] ?? match[7]);
+      if (s !== '' && e !== '') pathPattern = {title:match[1],season:s,episode:e};
+    }
+  } catch { /* Malformed escapes cannot invalidate other page evidence. */ }
+  // A URL slug cannot supply a properly written series title by itself.
+  const pathTitle = pathPattern && metadataTitles.find(title => titleSlug(title) === titleSlug(pathPattern.title));
+  const candidate = patterns[0] || (pathTitle ? {...pathPattern,title:pathTitle} : null);
+  if (!candidate) return null;
+  const matches = item => titleSlug(item.title) === titleSlug(candidate.title) &&
+    item.season === candidate.season && item.episode === candidate.episode;
+  if (!patterns.every(matches) || pathPattern && !matches(pathPattern)) return null;
+  if (metadataTitles.length && !metadataTitles.some(title => titleSlug(title) === titleSlug(candidate.title))) return null;
+  if (season !== '' && season !== candidate.season || episode !== '' && episode !== candidate.episode) return null;
+  return candidate;
 }
 
 function detectMedia(data) {
@@ -171,13 +264,21 @@ function detectMedia(data) {
     if (!titles.length) add(data.pageTitle);
     if (!titles.length) return empty;
   }
+  let season = episodeNumber(selected?.season, true);
+  let episode = episodeNumber(selected?.episode);
+  const pageEpisode = type === 'episode' ? episodeFromPage(data, titles, season, episode) : null;
+  if (pageEpisode) {
+    if (!titles.length) add(pageEpisode.title);
+    season ||= pageEpisode.season;
+    episode ||= pageEpisode.episode;
+  }
   const identityUrls = type === 'movie' && movie ? [movie.url, ...(movie.sameAs || [])] : [];
   const ids = [...new Set(identityUrls.map(imdbIdFromUrl).filter(Boolean))];
   const headingYear = normalizeText(hasAlternateHeading ? data.alternateHeading : data.heading).match(/\(((?:18|19|20|21)\d{2})\)\s*$/)?.[1];
   const dateYear = (type === 'episode' ? selected?.date : movie?.date)?.match(/^((?:18|19|20|21)\d{2})(?:-|$)/)?.[1];
   return { type, title:titles[0] || '', titles:titles.slice(0, 6), imdbId:ids.length === 1 ? ids[0] : '',
     year:(type === 'episode' ? '' : headingYear) || dateYear || '',
-    season:episodeNumber(selected?.season, true), episode:episodeNumber(selected?.episode),
+    season, episode,
     episodeTitle:type === 'episode' ? normalizeText(selected?.name || data.heading || data.ogTitle).slice(0,180) : '',
     sourceKey:hasAlternateHeading ? 'sourceAlternative' : selected ? 'sourceMetadata' : 'sourceHeading',
     source:hasAlternateHeading ? 'Alternative title on this page' : selected ? 'Media metadata' : 'Page heading' };
@@ -186,16 +287,17 @@ function detectMedia(data) {
 // Keep the original entry point available for existing integrations and fixtures.
 const detectFilm = detectMedia;
 
-function discussionQuery(value, type = 'movie', context = {}) {
+function discussionQuery(value, type = 'movie', context = {}, destination = 'eksi') {
   const title = normalizeText(value);
   if (!isValidTitle(title)) throw new Error('Invalid title');
   if (type === 'episode' && context.scope === 'episode') {
     const season = episodeNumber(context.season, true);
     const episode = episodeNumber(context.episode);
     if (season === '' || episode === '') throw new Error('Missing episode numbers');
-    return `${title} ${season}. sezon ${episode}. bölüm`;
+    return destination === 'reddit' ? `${title} S${season.padStart(2,'0')}E${episode.padStart(2,'0')} discussion`
+      : `${title} ${season}. sezon ${episode}. bölüm`;
   }
-  return title;
+  return destination === 'reddit' ? `${title} discussion` : title;
 }
 
 function destinationUrl(destination, value, imdbId = '', type = 'movie', context = {}) {
@@ -203,6 +305,7 @@ function destinationUrl(destination, value, imdbId = '', type = 'movie', context
   if (!isValidTitle(title)) throw new Error('Invalid title');
   if (!['movie','series','episode'].includes(type)) throw new Error('Invalid media type');
   if (destination === 'eksi') return `https://eksisozluk.com/?q=${encodeURIComponent(discussionQuery(title,type,context))}`;
+  if (destination === 'reddit') return `https://www.reddit.com/search/?q=${encodeURIComponent(discussionQuery(title,type,context,'reddit'))}`;
   if (destination === 'letterboxd') {
     if (type === 'movie' && /^tt\d{7,12}$/.test(imdbId)) return `https://letterboxd.com/imdb/${imdbId}/`;
     const query = encodeURIComponent(title).replace(/\./g, '%2E');

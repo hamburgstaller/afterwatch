@@ -1,0 +1,15 @@
+{
+  "props": {
+    "pageProps": {
+      "initFilm": {
+        "id": 294276,
+        "slug": "crimes-of-the-future-2022",
+        "title": "Müstakbel Suçlar",
+        "title_locale": "tr-TR",
+        "title_upcase": "MÜSTAKBEL SUÇLAR",
+        "original_title": "Crimes of the Future",
+        "year": 2022
+      }
+    }
+  }
+}

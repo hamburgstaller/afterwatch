@@ -71,11 +71,12 @@ function collectWith(scripts, options = {}) {
       return copy;
     }};
   const document = {
-    title:'Mezar izle',
-    querySelector:selector=>selector==='h1' ? heading : selector==='meta[property="og:type"]' ? {content:options.ogType||''} : null,
+    title:options.pageTitle || 'Mezar izle',
+    querySelector:selector=>selector==='h1' ? heading : selector==='meta[property="og:type"]' ? {content:options.ogType||''} : selector==='meta[property="og:title"]' ? {content:options.ogTitle||''} : selector==='script#__NEXT_DATA__' && options.nextData !== undefined ? {type:'application/json',textContent:options.nextData} : null,
     querySelectorAll:selector=>selector.startsWith('script') ? scripts.map(textContent=>({textContent})) : []
   };
-  return vm.runInNewContext(`(${f.collectPageData.toString()})()`, {document, URL, location:{hostname:options.host||'example.test',href:'https://example.test/film'}});
+  const url = new URL(options.url || 'https://example.test/film');
+  return vm.runInNewContext(`(${f.collectPageData.toString()})()`, {document, URL, location:{hostname:options.host||url.hostname,href:url.href,pathname:url.pathname}});
 }
 test('Serialized collector handles graph, mainEntity, schema type arrays and malformed JSON', () => {
   const data = collectWith(['{broken', JSON.stringify({'@graph':[{'@type':'WebPage',mainEntity:{'@type':['Thing','Movie'],name:'Raw',sameAs:'https://imdb.com/title/tt4954522'}}]})]);
@@ -207,4 +208,146 @@ test('Relative, absolute and cross-script JSON-LD references resolve to the same
   assert.equal(media.type,'episode');
   assert.equal(media.title,'Example Show');
   assert.equal(media.season,'2');
+});
+
+const episodePage = {
+  heading:'Breaking Bad 1. Sezon 1. Bölüm',
+  ogTitle:'Breaking Bad 1. Sezon 1. Bölüm izle | Example Catalog',
+  pageTitle:'Breaking Bad 1. Sezon 1. Bölüm izle | Example Catalog',
+  ogType:'video.episode', pathname:'/bolum/breaking-bad-1-sezon-1-bolum-1-izle-16/'
+};
+test('Episode heading regression fills the series name and both numbers with only Open Graph evidence', () => {
+  const media = f.detectMedia(episodePage);
+  assert.equal(media.type,'episode');
+  assert.equal(media.title,'Breaking Bad');
+  assert.equal(media.season,'1');
+  assert.equal(media.episode,'1');
+});
+test('Collector reads a Review itemReviewed only when its URL identifies the current page', () => {
+  const item = {'@type':'TVEpisode',name:'Pilot',url:'https://example.test/film',episodeNumber:1,
+    partOfSeries:{name:'Breaking Bad'},partOfSeason:{seasonNumber:1}};
+  const review = {'@type':'https://schema.org/Review',itemReviewed:item};
+  const data = collectWith([JSON.stringify(review)]);
+  assert.equal(data.media.length,1);
+  assert.equal(f.detectMedia(data).title,'Breaking Bad');
+  assert.equal(f.detectMedia(data).season,'1');
+  assert.equal(f.detectMedia(data).episode,'1');
+  for (const url of ['https://other.test/film','https://example.test/another',undefined]) {
+    item.url=url;
+    assert.equal(collectWith([JSON.stringify(review)]).media.length,0);
+  }
+});
+test('Incomplete episode metadata can use the matching heading but never another series or conflicting numbers', () => {
+  const base = {...episodePage,media:[{type:'episode',name:'Pilot',series:{name:'Breaking Bad'}}]};
+  assert.equal(f.detectMedia(base).season,'1');
+  assert.equal(f.detectMedia(base).episode,'1');
+  const other = f.detectMedia({...base,media:[{type:'episode',name:'Pilot',series:{name:'Other Show'}}]});
+  assert.equal(other.title,'Other Show');
+  assert.equal(other.season,'');
+  const conflict = f.detectMedia({...base,media:[{type:'episode',season:2,series:{name:'Breaking Bad'}}]});
+  assert.equal(conflict.season,'2');
+  assert.equal(conflict.episode,'');
+});
+test('Episode fallback preserves numbered titles, supports specials and common international labels', () => {
+  for (const heading of ['Example Series 2049 0. Sezon 02. Bölüm','Example Series 2049 S00E02',
+    'Example Series 2049 0x02','Example Series 2049 Season 0 Episode 2',
+    'Example Series 2049 Temporada 0 Episodio 2','Example Series 2049 Temporada 0 Episódio 2',
+    'Example Series 2049 Stagione 0 Episodio 2']) {
+    const media = f.detectMedia({ogType:'video.episode',heading});
+    assert.equal(media.title,'Example Series 2049');
+    assert.equal(media.season,'0');
+    assert.equal(media.episode,'2');
+  }
+});
+test('Conflicting page signals, invalid numbers and prose do not invent episode information', () => {
+  for (const overrides of [
+    {pathname:'/bolum/breaking-bad-2-sezon-1-bolum/'},
+    {ogTitle:'Breaking Bad 1. Sezon 2. Bölüm'},
+    {heading:'Another Show 1. Sezon 1. Bölüm'}
+  ]) assert.equal(f.detectMedia({...episodePage,...overrides}).title,'');
+  for (const heading of ['Show 1000. Sezon 1. Bölüm','Show 1. Sezon 0. Bölüm',
+    'Show 1. Sezon 10000. Bölüm','Show 1. Sezon 1. Bölüm review','Show -1. Sezon 2. Bölüm']) {
+    assert.equal(f.detectMedia({ogType:'video.episode',heading}).title,'');
+  }
+});
+test('Title patterns alone cannot turn articles, collections or movies into episodes', () => {
+  assert.equal(f.detectMedia({...episodePage,ogType:'article'}).type,'');
+  assert.equal(f.detectMedia({...episodePage,ogType:'video.movie'}).type,'movie');
+  assert.equal(f.detectMedia({...episodePage,media:[{type:'movie',name:'Real Movie'}]}).title,'Real Movie');
+  assert.equal(f.detectMedia({...episodePage,media:[{type:'episode',name:'A'},{type:'episode',name:'B'}]}).title,'');
+});
+test('Path numbering fills missing numbers only for a known matching series without guessing a title', () => {
+  const data = {ogType:'video.episode',pathname:'/episodes/example-show-s02e03/',media:[{type:'episode',name:'Pilot',series:{name:'Example Show'}}]};
+  assert.equal(f.detectMedia(data).season,'2');
+  assert.equal(f.detectMedia(data).episode,'3');
+  assert.equal(f.detectMedia({...data,media:[]}).title,'');
+  assert.equal(f.detectMedia({...data,pathname:'/episodes/other-show-s02e03/'}).season,'');
+  assert.equal(f.detectMedia({...data,pathname:'/%zz'}).season,'');
+});
+test('Collector emits only the pathname, excluding potentially private query and fragment values', () => {
+  const data = collectWith([], {url:'https://example.test/episode?private=value#token'});
+  assert.equal(data.pathname,'/episode');
+  assert.ok(!JSON.stringify(data).includes('private'));
+  assert.ok(!JSON.stringify(data).includes('token'));
+});
+
+test('Reddit searches use fixed origins and destination-appropriate episode notation', () => {
+  assert.equal(new URL(f.destinationUrl('reddit','Raw')).searchParams.get('q'),'Raw discussion');
+  assert.equal(new URL(f.destinationUrl('reddit','Breaking Bad','','episode',{scope:'episode',season:'01',episode:'2'})).searchParams.get('q'),'Breaking Bad S01E02 discussion');
+  assert.equal(new URL(f.destinationUrl('reddit','Show','','episode',{scope:'series'})).searchParams.get('q'),'Show discussion');
+  assert.equal(new URL(f.destinationUrl('reddit','Show','','episode',{scope:'episode',season:0,episode:12})).searchParams.get('q'),'Show S00E12 discussion');
+  for (const title of ['A&B # / ?','<img src=x onerror=alert(1)>','https://evil.test/']) {
+    const url = new URL(f.destinationUrl('reddit',title));
+    assert.equal(url.origin,'https://www.reddit.com');
+    assert.equal(url.pathname,'/search/');
+    assert.equal(url.searchParams.get('q'),`${title} discussion`);
+  }
+  assert.throws(()=>f.destinationUrl('reddit','Show','','episode',{scope:'episode',season:1,episode:0}));
+});
+
+const mubi = require('./fixtures/mubi.json');
+const mubiOptions = {url:'https://mubi.com/tr/tr/films/crimes-of-the-future-2022',
+  heading:'MÜSTAKBEL SUÇLAR',ogType:'video.movie',nextData:JSON.stringify(mubi)};
+test('MUBI localized film title stays primary with its page-provided original title as an alternative', () => {
+  const film=f.detectMedia(collectWith([],mubiOptions));
+  assert.equal(film.title,'Müstakbel Suçlar');
+  assert.deepEqual(film.titles,['Müstakbel Suçlar','Crimes of the Future']);
+  assert.equal(film.year,'2022');
+  assert.equal(film.imdbId,'');
+});
+test('MUBI English page titles stay primary and identical original titles are not duplicated', () => {
+  const fixture=structuredClone(mubi);
+  const record=fixture.props.pageProps.initFilm;
+  record.title='Crimes of the Future'; record.title_upcase='CRIMES OF THE FUTURE';
+  const options={...mubiOptions,url:'https://mubi.com/en/tr/films/crimes-of-the-future-2022',heading:record.title_upcase,nextData:JSON.stringify(fixture)};
+  assert.deepEqual(f.detectMedia(collectWith([],options)).titles,['Crimes of the Future']);
+  record.original_title='Example Original';
+  assert.deepEqual(f.detectMedia(collectWith([],{...options,nextData:JSON.stringify(fixture)})).titles,['Crimes of the Future','Example Original']);
+});
+test('MUBI mismatched slugs, headings, hosts and non-film pages cannot supply alternative titles', () => {
+  for (const options of [
+    {...mubiOptions,url:'https://mubi.com/tr/tr/films/another-film'},
+    {...mubiOptions,heading:'Another Movie'},
+    {...mubiOptions,url:'https://mubi.com.evil.test/tr/tr/films/crimes-of-the-future-2022'},
+    {...mubiOptions,url:'https://mubi.com/tr/tr/collections/crimes-of-the-future-2022'},
+    {...mubiOptions,ogType:'article'},
+    {...mubiOptions,nextData:'{broken'},
+    {...mubiOptions,nextData:' '.repeat(250001)}
+  ]) assert.equal(f.detectMedia(collectWith([],options)).titles.includes('Crimes of the Future'),false);
+});
+test('MUBI ignores recommendations and unavailable originals without deriving English from a URL slug', () => {
+  const fixture=structuredClone(mubi);
+  delete fixture.props.pageProps.initFilm.original_title;
+  fixture.props.pageProps.recommendations=[{title:'Unrelated Film',original_title:'Another Film'}];
+  assert.deepEqual(f.detectMedia(collectWith([],{...mubiOptions,nextData:JSON.stringify(fixture)})).titles,['Müstakbel Suçlar']);
+  delete fixture.props.pageProps.initFilm;
+  assert.deepEqual(f.detectMedia(collectWith([],{...mubiOptions,nextData:JSON.stringify(fixture)})).titles,['MÜSTAKBEL SUÇLAR']);
+});
+test('MUBI can enrich agreeing Movie metadata but cannot override unrelated or ambiguous media', () => {
+  const film=f.detectMedia(collectWith([JSON.stringify({'@type':'Movie',name:'Crimes of the Future',datePublished:'2022',sameAs:'https://imdb.com/title/tt14549466/'})],mubiOptions));
+  assert.equal(film.title,'Müstakbel Suçlar');
+  assert.equal(film.imdbId,'tt14549466');
+  assert.deepEqual(film.titles,['Müstakbel Suçlar','Crimes of the Future']);
+  assert.equal(f.detectMedia(collectWith([JSON.stringify({'@type':'Movie',name:'Another Movie'})],mubiOptions)).title,'Another Movie');
+  assert.equal(f.detectMedia(collectWith([JSON.stringify([{'@type':'Movie',name:'A'},{'@type':'Movie',name:'B'}])],mubiOptions)).title,'');
 });

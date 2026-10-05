@@ -1,4 +1,57 @@
-# Release review — AfterWatch 1.1.0
+# Release review — AfterWatch 1.2.0
+
+Reviewed and approved for publication by the project owner on October 5, 2026. This feature release follows 1.1.0; the local 1.1.1 episode fix is included rather than published separately.
+
+## Current behavior and boundaries
+
+- Letterboxd is always available. Settings independently enables or disables Reddit and Ekşi, including disabling both discussion buttons. Each platform has an audience/language description translated into all five interface languages.
+- Reddit navigation is a fixed-origin HTTPS search, with the selected title plus discussion, and S01E02 notation for episode searches. There is no guessed subreddit, thread ID, or automatic posting. Existing Ekşi search and Letterboxd movie identity behavior remain available.
+- New installations use the supported browser UI language, with English fallback. Turkish initially selects Ekşi; other languages initially select Reddit. Existing saved-language users keep Ekşi when upgrading. Saved platform choices take priority over browser or interface language.
+- Only language and enabledPlatforms are saved locally. Invalid stored platform identifiers cannot create arbitrary destinations. No geolocation, additional permissions, backend, or runtime dependencies were added.
+- Preferences use serialized partial writes so language and platform updates do not overwrite each other. Late preference loading does not replace manual choices. Discussion buttons wait until preferences finish loading; Letterboxd remains independent. Storage failures show localized feedback and keep the current choice usable.
+- Settings supports Back, Escape, labelled checkboxes, focus return, and preserved title/episode fields. A bounded selection panel keeps the three destination buttons within normal Chrome popup dimensions.
+- Episode metadata/heading/path improvements from the local 1.1.1 fix remain included. Missing or contradictory evidence cannot fill unknown fields by inventing values; page-provided metadata is not independently verified.
+- MUBI's current-film record is read from a size-limited page-embedded script only on a matching film URL, with agreement between the film slug and heading. The localized title remains primary and its supplied original title becomes an alternative. Identical names are deduplicated; missing, unrelated, malformed, or oversized records do not supply alternatives. No title is translated or inferred from a URL slug.
+
+## Validation
+
+- 94 Node regression tests passed, zero failed. Coverage includes upgrade/default selection, independent language/platform choices, both/all-disabled platforms, slow loading and writes, storage failures, malformed preferences, fixed Reddit URLs, validated episode searches, MUBI localized/original names and rejection cases, and all previous detection/security regressions.
+- npm run check passed: matching 1.2.0 metadata, a 131-character manifest description, local production scripts, required assets, MIT license, and syntax checks.
+- Chrome 154.0.8037.98 checks passed: 60 scenarios spanning five languages, movie and two episode states, and all four platform combinations. First-run choices, localized Settings, search queries, saved restoration, no horizontal overflow, and maximum popup height of 594px were verified.
+- The previous 20 localized popup scenarios and two synthetic DOM collector checks also passed. No application page/console errors were recorded. Turkish Settings and English three-platform screenshots were visually inspected.
+- Additional MUBI checks read the actual page's film record in the in-app browser, validated the unmodified serialized collector in native Chrome against Turkish/English synthetic DOM fixtures, and exercised the actual film record in the popup. Selecting Crimes of the Future changed both destination searches correctly; the Turkish popup screenshot was visually inspected. In-app read-only inspection substituted heading access for DOM cloning and used the observed ASCII slug without URI decoding; native fixture checks used the production collector unchanged.
+- Production packaging contains only manifest.json, popup.html, popup.css, popup.js, film.js, i18n.js, and LICENSE. Development code and fixtures are excluded. SHA-256: `819fafd9376dd720e6ac70d9ed5068f45e0121481484b3e4a0cb7b7f638c3e62`.
+
+## Publication and remaining checks
+
+Source documentation, the extension description, and release notes describe selectable global/Turkish destinations. The project owner explicitly approved publishing the reviewed source, updated GitHub About text, v1.2.0 tag, and production ZIP. The manual checks and documented limitations remain applicable.
+
+Reload the unpacked extension, confirm version 1.2.0, and check platform persistence in the real popup. Browser preview checks simulate Chrome APIs and do not verify unpacked loading or real permissions; Edge remains unverified. Search result language, catalog availability, thread matching, and spoiler exclusion cannot be guaranteed. No external catalog or date-based discussion lookup is implemented.
+
+The earlier reviews below are historical evidence, not publication approval for 1.2.0.
+
+---
+
+## Archived local review — AfterWatch 1.1.1 (not published separately)
+
+Prepared locally on October 5, 2026. Superseded by the 1.2.0 feature release preparation.
+
+- Fixed episode metadata nested inside Review itemReviewed when the reviewed URL identifies the current page. Unrelated reviews, recommendation lists, and comments are not traversed.
+- Added conservative heading/path fallbacks on pages already identified as episodes. Recognized labels separate the series title from season and episode numbers; matching URL slugs supply numbers only for a known series. Conflicting page signals cannot replace structured identity or numbers.
+- Validated the reported live episode page with the serialized collector: Breaking Bad, season 1, episode 1. The same page also worked after removing structured media candidates to exercise the Open Graph/heading/path fallback. No hostname adapter was added; public regression tests use a neutral domain.
+- 76 Node regression tests passed with zero failures. npm run check passed with matching version 1.1.1 and unchanged permissions/CSP.
+- Chrome 154.0.8037.98 browser checks passed: the previous 20 localized popup scenarios and two synthetic DOM pages, plus the live collector result in the production popup in all five languages. Expected episode-specific Ekşi URLs, filled fields, no page errors, no horizontal overflow, and a maximum popup height of 594px were verified.
+- The Turkish popup screenshot was visually inspected. Live checks used an isolated browser context and did not access the owner's browser profile.
+- The local production ZIP contains only manifest.json, popup.html, popup.css, popup.js, film.js, i18n.js, and LICENSE. SHA-256: `41e68774337814963bf5d251a62773a30da8640c5f7014062562816816ca6cc6`.
+- Privacy documentation now describes reading only the URL pathname for episode detection. Query parameters and fragments are excluded from that signal, and the pathname is neither stored nor included in destination URLs.
+
+Reload the unpacked extension and confirm version 1.1.1 before manually checking a real episode page. Automated popup checks simulate Chrome APIs; actual extension loading and Edge remain unverified. Detection still requires recognizable media evidence and can require manual correction on unsupported or ambiguous pages. No external catalog lookup, date-based discussion navigation, or new permissions were added.
+
+The following archived review documents the previously published 1.1.0 release; its publication approval does not cover this patch.
+
+---
+
+## Archived release review — AfterWatch 1.1.0
 
 Prepared locally on October 4, 2026. The project owner approved publication as version 1.1.0 on October 5, 2026.
 

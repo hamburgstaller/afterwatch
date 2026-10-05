@@ -22,7 +22,6 @@ const messages = {
     spoiler:'Series discussions may contain spoilers for later episodes. Episode search does not filter spoilers.',
     sourceAlternative:'Alternative title on this page', sourceMetadata:'Media metadata', sourceHeading:'Page heading',
     episodeDetail:'Season {season} · Episode {episode}', unknown:'?',
-    footer:'Opens a new tab only when you click. Only your language preference is saved; no watch history.'
   },
   es: {
     eyebrow:'LA CONVERSACIÓN CONTINÚA.', intro:'Ya lo has visto. Ahora únete a la conversación.',
@@ -44,7 +43,6 @@ const messages = {
     spoiler:'Las conversaciones sobre la serie pueden revelar episodios posteriores. La búsqueda de episodios no filtra spoilers.',
     sourceAlternative:'Título alternativo de esta página', sourceMetadata:'Metadatos del contenido', sourceHeading:'Encabezado de la página',
     episodeDetail:'Temporada {season} · Episodio {episode}', unknown:'?',
-    footer:'Solo abre una nueva pestaña al hacer clic. Solo se guarda tu idioma; no tu historial de visionado.'
   },
   pt: {
     eyebrow:'A CONVERSA CONTINUA.', intro:'Você já assistiu. Agora participe da conversa.',
@@ -66,7 +64,6 @@ const messages = {
     spoiler:'As conversas sobre a série podem revelar episódios posteriores. A busca por episódios não filtra spoilers.',
     sourceAlternative:'Título alternativo nesta página', sourceMetadata:'Metadados do conteúdo', sourceHeading:'Título da página',
     episodeDetail:'Temporada {season} · Episódio {episode}', unknown:'?',
-    footer:'Uma nova aba só é aberta quando você clica. Apenas o idioma é salvo; nenhum histórico do que você assistiu.'
   },
   it: {
     eyebrow:'LA CONVERSAZIONE CONTINUA.', intro:'Hai finito di guardare. Ora partecipa alla conversazione.',
@@ -88,7 +85,6 @@ const messages = {
     spoiler:'Le conversazioni sulla serie possono rivelare episodi successivi. La ricerca degli episodi non filtra gli spoiler.',
     sourceAlternative:'Titolo alternativo in questa pagina', sourceMetadata:'Metadati del contenuto', sourceHeading:'Titolo della pagina',
     episodeDetail:'Stagione {season} · Episodio {episode}', unknown:'?',
-    footer:'Apre una nuova scheda solo quando fai clic. Salva solo la lingua; nessuna cronologia di visione.'
   },
   tr: {
     eyebrow:'SOHBET DEVAM EDİYOR.', intro:'İzledin. Şimdi sohbete katıl.',
@@ -110,9 +106,61 @@ const messages = {
     spoiler:'Dizi tartışmaları sonraki bölümlerle ilgili spoiler içerebilir. Bölüm araması spoilerları filtrelemez.',
     sourceAlternative:'Bu sayfadaki alternatif ad', sourceMetadata:'İçerik metadatası', sourceHeading:'Sayfa başlığı',
     episodeDetail:'{season}. sezon · {episode}. bölüm', unknown:'?',
-    footer:'Yalnızca tıkladığında yeni sekme açar. Sadece dil tercihin kaydedilir; izleme geçmişin kaydedilmez.'
   }
 };
+const settingsMessages = {
+  en: {
+    settings:'Settings', back:'Back', platformHelp:'Choose which discussion platforms appear. Letterboxd is always available.',
+    global:'Global', alwaysAvailable:'Always available', redditRegion:'Global · predominantly English', eksiRegion:'Türkiye · Turkish',
+    redditSetting:'Search film and TV discussions. Result language and matching episode threads are not guaranteed.',
+    eksiSetting:'Search Turkish film and TV discussions. A series often shares one topic across episodes.',
+    letterboxdSetting:'Movie reviews and ratings. TV availability is limited.', redditDescription:'Find film and TV discussions',
+    redditSearch:'Search: {query}', platformSaveFailed:'Platform choices could not be saved. Toggle a platform to retry.',
+    settingsLoadFailed:'Saved preferences could not be loaded. Check your choices before navigating.',
+    footer:'Opens a new tab only when you click. Saves language and platform preferences; no watch history.'
+  },
+  es: {
+    settings:'Ajustes', back:'Volver', platformHelp:'Elige qué plataformas de conversación mostrar. Letterboxd siempre está disponible.',
+    global:'Global', alwaysAvailable:'Siempre disponible', redditRegion:'Global · principalmente en inglés', eksiRegion:'Turquía · turco',
+    redditSetting:'Busca conversaciones sobre cine y TV. No se garantiza el idioma ni encontrar un hilo del episodio.',
+    eksiSetting:'Busca conversaciones sobre cine y TV en turco. Los episodios suelen compartir un tema de la serie.',
+    letterboxdSetting:'Reseñas y valoraciones de películas. La disponibilidad de TV es limitada.', redditDescription:'Busca conversaciones sobre cine y TV',
+    redditSearch:'Buscar: {query}', platformSaveFailed:'No se pudieron guardar las plataformas. Activa o desactiva una para reintentar.',
+    settingsLoadFailed:'No se pudieron cargar tus preferencias. Comprueba tus opciones antes de navegar.',
+    footer:'Solo abre una pestaña al hacer clic. Guarda idioma y plataformas; no tu historial de visionado.'
+  },
+  pt: {
+    settings:'Configurações', back:'Voltar', platformHelp:'Escolha quais plataformas de conversa mostrar. O Letterboxd está sempre disponível.',
+    global:'Global', alwaysAvailable:'Sempre disponível', redditRegion:'Global · principalmente em inglês', eksiRegion:'Turquia · turco',
+    redditSetting:'Pesquise conversas sobre cinema e TV. O idioma e a existência de tópicos do episódio não são garantidos.',
+    eksiSetting:'Pesquise conversas sobre cinema e TV em turco. Os episódios costumam compartilhar um tópico da série.',
+    letterboxdSetting:'Resenhas e avaliações de filmes. A disponibilidade de TV é limitada.', redditDescription:'Encontre conversas sobre cinema e TV',
+    redditSearch:'Pesquisar: {query}', platformSaveFailed:'Não foi possível salvar as plataformas. Ative ou desative uma para tentar novamente.',
+    settingsLoadFailed:'Não foi possível carregar suas preferências. Confira as opções antes de navegar.',
+    footer:'Só abre uma aba quando você clica. Salva idioma e plataformas; nenhum histórico do que você assistiu.'
+  },
+  it: {
+    settings:'Impostazioni', back:'Indietro', platformHelp:'Scegli quali piattaforme di discussione mostrare. Letterboxd è sempre disponibile.',
+    global:'Globale', alwaysAvailable:'Sempre disponibile', redditRegion:'Globale · prevalentemente in inglese', eksiRegion:'Turchia · turco',
+    redditSetting:'Cerca discussioni su film e TV. La lingua e la presenza di discussioni sull’episodio non sono garantite.',
+    eksiSetting:'Cerca discussioni su film e TV in turco. Gli episodi spesso condividono un unico argomento sulla serie.',
+    letterboxdSetting:'Recensioni e valutazioni di film. La disponibilità di TV è limitata.', redditDescription:'Trova discussioni su film e TV',
+    redditSearch:'Cerca: {query}', platformSaveFailed:'Impossibile salvare le piattaforme. Attivane o disattivane una per riprovare.',
+    settingsLoadFailed:'Impossibile caricare le preferenze. Controlla le scelte prima di navigare.',
+    footer:'Apre una scheda solo quando fai clic. Salva lingua e piattaforme; nessuna cronologia di visione.'
+  },
+  tr: {
+    settings:'Ayarlar', back:'Geri', platformHelp:'Gösterilecek tartışma platformlarını seç. Letterboxd her zaman kullanılabilir.',
+    global:'Global', alwaysAvailable:'Her zaman kullanılabilir', redditRegion:'Global · ağırlıklı İngilizce', eksiRegion:'Türkiye · Türkçe',
+    redditSetting:'Film ve dizi tartışmalarını ara. Sonuçların dili ve ilgili bölüm başlığının bulunması garanti değildir.',
+    eksiSetting:'Türkçe film ve dizi tartışmalarını ara. Bölümler çoğunlukla aynı dizi başlığı altında tartışılır.',
+    letterboxdSetting:'Film incelemeleri ve puanlama. Dizi desteği sınırlıdır.', redditDescription:'Film ve dizi tartışmalarını bul',
+    redditSearch:'Arama: {query}', platformSaveFailed:'Platform tercihleri kaydedilemedi. Tekrar denemek için bir platformu açıp kapat.',
+    settingsLoadFailed:'Kayıtlı tercihler yüklenemedi. Yönlendirmeden önce seçimlerini kontrol et.',
+    footer:'Yalnızca tıkladığında sekme açar. Dil ve platform tercihleri kaydedilir; izleme geçmişi tutulmaz.'
+  }
+};
+for (const [language,catalog] of Object.entries(settingsMessages)) Object.assign(messages[language],catalog);
 for (const catalog of Object.values(messages)) Object.freeze(catalog);
 Object.freeze(messages);
 function supportedLanguage(language) { return Object.hasOwn(messages, language) ? language : 'en'; }

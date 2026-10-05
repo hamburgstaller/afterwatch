@@ -11,7 +11,7 @@
     <header>
       <h1>AfterWatch</h1>
       <p class="intro" data-i18n="intro">You've watched it. Now join the conversation.</p>
-      <div class="language-row">
+      <div class="header-actions"><div class="language-row">
         <label for="language" data-i18n="language">Language</label>
         <select id="language">
           <option value="en" lang="en">English</option>
@@ -20,9 +20,31 @@
           <option value="it" lang="it">Italiano</option>
           <option value="tr" lang="tr">Türkçe</option>
         </select>
-      </div>
+      </div><button id="settingsBtn" class="settings-button" type="button" aria-label="Settings" data-i18n-aria="settings" aria-controls="settingsPanel" aria-expanded="false"><span aria-hidden="true">⚙</span></button></div>
       <p id="languageStatus" class="detail" role="status" hidden></p>
     </header>
+    <section id="settingsPanel" class="settings-panel" aria-labelledby="settingsTitle" hidden tabindex="-1">
+      <button id="closeSettings" class="back-button" type="button" data-i18n="back">Back</button>
+      <h2 id="settingsTitle" data-i18n="settings">Settings</h2>
+      <p class="settings-intro" data-i18n="platformHelp">Choose which discussion platforms appear. Letterboxd is always available.</p>
+      <article class="platform-option permanent">
+        <strong>Letterboxd</strong><span class="platform-region" data-i18n="global">Global</span>
+        <p data-i18n="letterboxdSetting">Movie reviews and ratings. TV availability is limited.</p>
+        <span class="platform-badge" data-i18n="alwaysAvailable">Always available</span>
+      </article>
+      <label class="platform-option" for="redditEnabled">
+        <span class="platform-heading"><strong>Reddit</strong><input id="redditEnabled" type="checkbox" aria-describedby="redditRegion redditSetting"></span>
+        <span id="redditRegion" class="platform-region" data-i18n="redditRegion">Global · predominantly English</span>
+        <span id="redditSetting" class="platform-explanation" data-i18n="redditSetting">Search film and TV discussions. Result language and matching episode threads are not guaranteed.</span>
+      </label>
+      <label class="platform-option" for="eksiEnabled">
+        <span class="platform-heading"><strong>Ekşi Sözlük</strong><input id="eksiEnabled" type="checkbox" aria-describedby="eksiRegion eksiSetting"></span>
+        <span id="eksiRegion" class="platform-region" data-i18n="eksiRegion">Türkiye · Turkish</span>
+        <span id="eksiSetting" class="platform-explanation" data-i18n="eksiSetting">Search Turkish film and TV discussions. A series often shares one topic across episodes.</span>
+      </label>
+      <p id="settingsStatus" class="detail" role="status" hidden></p>
+    </section>
+    <div id="watchPanel">
     <section class="film-card" aria-label="Media selection" data-i18n-aria="selection" tabindex="0">
       <label for="mediaType" data-i18n="typeLabel">Content type</label>
       <select id="mediaType">
@@ -54,13 +76,19 @@
         <span class="destination-description" data-i18n="eksiDescription">Explore discussions in Turkish</span>
         <span id="eksiRoute" class="route"></span>
       </button>
+      <button id="redditBtn" class="destination reddit" type="button" disabled hidden>
+        <span class="destination-name">Reddit <span aria-hidden="true">↗</span></span>
+        <span class="destination-description" data-i18n="redditDescription">Find film and TV discussions</span>
+        <span id="redditRoute" class="route"></span>
+      </button>
       <button id="letterboxdBtn" class="destination letterboxd" type="button" disabled>
         <span class="destination-name">Letterboxd <span aria-hidden="true">↗</span></span>
         <span class="destination-description" data-i18n="letterboxdDescription">Read reviews and rate on Letterboxd</span>
         <span id="letterboxdRoute" class="route">Search by movie title</span>
       </button>
     </div>
-    <footer data-i18n="footer">Opens a new tab only when you click. Only your language preference is saved; no watch history.</footer>
+    </div>
+    <footer data-i18n="footer">Opens a new tab only when you click. Saves language and platform preferences; no watch history.</footer>
   </main>
   <script src="film.js"></script>
   <script src="i18n.js"></script>

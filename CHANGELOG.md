@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.2.0 — 2026-10-05
+
+- Suggest MUBI's page-provided original title as an alternative while preserving the page's localized primary title. Validate the film slug and heading; ignore unrelated or missing records.
+
+- Add a settings view to show or hide Reddit and Ekşi Sözlük independently. Letterboxd stays available.
+- Explain each platform's audience and language in all five interface languages.
+- Add Reddit title searches, using S01E02 notation for episode-specific searches; never guess a subreddit or thread URL.
+- Use the browser UI language for first-run defaults. Keep Ekşi for existing users with a saved language, and preserve saved platform choices when the interface language changes.
+- Store only language and enabled-platform preferences locally. Preserve manual choices during loading and serialize preference writes.
+
+- Read Review itemReviewed media metadata when its URL identifies the active page.
+- Fill missing series titles and season/episode numbers from recognized episode headings on pages with episode metadata.
+- Support Turkish season/episode labels, S01E02, 1x02, and English, Spanish, Portuguese, and Italian labels.
+- Use matching episode path patterns as a fallback for known series; ignore query parameters and fragments.
+- Keep structured identities and numbers when page signals disagree. Episode fallback uses no hostname-specific rules or new permissions.
+- Add regression tests and an incomplete-metadata preview scenario.
+
+The locally prepared 1.1.1 fix was not published separately; it is included in 1.2.0.
+
 ## 1.1.0 — 2026-10-05
 
 - Add TVSeries and TVEpisode detection, local graph references, and series/season relationships.

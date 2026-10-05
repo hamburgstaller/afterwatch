@@ -16,6 +16,23 @@ input, select { width: 100%; min-width: 0; border: 1px solid #525d6a; border-rad
 select { margin-bottom: 12px; }
 [hidden] { display: none !important; }
 .language-row { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 6px; margin: 0; }
+.header-actions { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 8px; }
+.settings-button { width: 28px; height: 30px; padding: 0; flex-shrink: 0; border: 1px solid #525d6a; border-radius: 6px; color: #fff; background: #11151a; font-size: 18px; cursor: pointer; }
+.settings-button:hover, .back-button:hover { background: #303943; }
+.settings-panel { max-height: 425px; overflow-y: auto; padding: 1px 2px 3px; }
+.settings-panel h2 { font-size: 18px; margin: 12px 0 8px; }
+.settings-intro { font-size: 12px; line-height: 1.5; color: #b7bfc8; }
+.back-button { color: #f1f3f5; background: #1d2228; border: 1px solid #525d6a; border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 12px; }
+.platform-option { display: block; margin: 10px 0 0; padding: 12px; border: 1px solid #353c45; border-radius: 10px; background: #1d2228; font-size: 12px; line-height: 1.5; }
+label.platform-option { cursor: pointer; }
+.platform-option strong { color: #f1f3f5; font-size: 14px; }
+.platform-heading { display: flex; justify-content: space-between; align-items: center; }
+.platform-heading input { width: 18px; height: 18px; padding: 0; margin: 0; accent-color: #87d9ab; }
+.platform-region, .platform-explanation { display: block; }
+.platform-region { color: #aab7c3; font-size: 11px; margin-top: 4px; }
+.platform-explanation, .platform-option p { margin: 7px 0 0; color: #c4ccd4; }
+.platform-badge { display: inline-block; margin-top: 6px; color: #87d9ab; font-size: 11px; }
+.many-platforms .film-card { max-height: 140px; }
 .language-row label { margin: 0; }
 .language-row select { width: auto; margin: 0 0 0 auto; padding: 6px 9px; font-size: 11px; }
 .episode-numbers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
@@ -31,6 +48,8 @@ input::placeholder { color: #929da9; }
 .destination { display: block; text-align: left; width: 100%; padding: 11px 12px; border-radius: 10px; cursor: pointer; font: inherit; transition: background .15s ease; }
 .eksi { color: #effff4; background: #23513a; border: 1px solid #448260; }
 .eksi:not(:disabled):hover { background: #2d6649; }
+.reddit { color: #fff3ed; background: #4e3028; border: 1px solid #b57559; }
+.reddit:not(:disabled):hover { background: #664036; }
 .letterboxd { color: #edf4ff; background: #263749; border: 1px solid #506c88; }
 .letterboxd:not(:disabled):hover { background: #30475f; }
 .destination-name { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; }

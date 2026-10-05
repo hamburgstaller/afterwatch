@@ -11,6 +11,11 @@ const files = new Map([
 http.createServer((req,res)=>{
   const url = new URL(req.url,'http://127.0.0.1');
   if(url.pathname==='/favicon.ico') {res.writeHead(204);res.end();return;}
+  if (url.pathname==='/fixtures/episode-heading') {
+    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+    res.end('<!doctype html><html lang="en"><meta charset="utf-8"><title>Breaking Bad 1. Sezon 1. Bölüm izle | Example Catalog</title><meta property="og:type" content="video.episode"><h1>Breaking Bad 1. Sezon 1. Bölüm</h1><p>Synthetic episode page with incomplete metadata. No video.</p></html>');
+    return;
+  }
   if (url.pathname==='/fixtures/series' || url.pathname==='/fixtures/episode') {
     const kind=url.pathname.endsWith('episode')?'episode':'series';
     const fixture=JSON.parse(fs.readFileSync(path.join(root,'tests/fixtures/tv.json'),'utf8'))[kind];

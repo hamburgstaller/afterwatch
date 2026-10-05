@@ -2,24 +2,35 @@
 
 **You've watched it. Now join the conversation.**
 
-A small browser extension that takes you from a movie, series, or episode page to discussions on **Ekşi Sözlük** and title searches on **Letterboxd**. Check the detected title and content type, adjust them if needed, and choose where to go next.
+A small browser extension that takes you from a movie, series, or episode page to discussions on **Reddit** or **Ekşi Sözlük**, and reviews on **Letterboxd**. Check the detected title and content type, adjust them if needed, and choose where to go next.
 
 [Download the extension](https://github.com/hamburgstaller/afterwatch/releases/latest) · [Source and issues](https://github.com/hamburgstaller/afterwatch)
 
-Version 1.1.0 supports movies, TV series, and episodes, with an English, Spanish, Portuguese, Italian, or Turkish interface. Shared live rooms remain a future idea, documented in [ROADMAP.md](ROADMAP.md).
+Version 1.2.0 adds platform settings and improves episode detection, with an English, Spanish, Portuguese, Italian, or Turkish interface. Shared live rooms remain a future idea, documented in [ROADMAP.md](ROADMAP.md).
 
 ## Features
 
 - Reads standard `Movie`, `TVSeries`, and `TVEpisode` JSON-LD, including local `@id` references, `mainEntity`, and series/season relationships. Open Graph movie/TV types provide a fallback.
 - Separates localized and alternative titles when a supported heading layout agrees with the page's media metadata.
+- Reads MUBI's embedded current-film record only when its slug and title match the film page and heading. Keeps the page's localized title first and offers its supplied original title as a selectable alternative. The original title is not necessarily English; no translation or external title lookup is performed.
 - Preserves numbers and meaningful parentheses in titles, including `1917`, `Blade Runner 2049`, and `12 Angry Men`.
 - Lets you edit the title, choose the content type, or select another title found on the page.
-- Keeps a series title separate from an episode title and its season/episode numbers. Missing series names require manual entry.
+- Lets you show or hide Reddit and Ekşi independently in Settings. Letterboxd is always available, even with all discussion platforms disabled. Only supported destinations can be enabled; custom site URLs are not supported.
+- Describes each platform's audience and language in Settings. These labels describe the destination, not the user's detected country.
+- Keeps a series title separate from an episode title and its season/episode numbers. Reads Review itemReviewed metadata only when the reviewed item's URL identifies the active page.
+- Fills missing episode information from recognized headings such as `Show 1. Sezon 2. Bölüm`, `Show S01E02`, or `Show Season 1 Episode 2` on pages with episode metadata. Matching path patterns can supply numbers for a known series. Conflicting signals or unrecognized formats require manual correction.
 - Offers series-wide or episode-specific Ekşi searches. Episode searches use the series title plus Turkish season/episode labels; season zero is supported for specials. Search results and spoiler-free topics are not guaranteed.
-- Keeps English as the default interface. The selector includes Spanish, Portuguese (Brazilian wording), Italian, and Turkish, and saves only the selected language locally. Media titles and destination-site content are not translated.
+- Searches Reddit by title and the word `discussion`, using `S01E02` notation for an episode search. Searches do not identify a verified thread or subreddit and do not guarantee English results or spoiler-free discussion.
+- Starts new installations in a supported browser UI language, falling back to English. Turkish initially enables Ekşi; other languages initially enable Reddit. Existing users with a saved language keep Ekşi when upgrading, unless they already chose platforms. Language changes never change platform choices. Portuguese uses Brazilian wording; media titles and destination-site content are not translated.
 - Opens the Letterboxd movie page using one unambiguous IMDb ID from Movie metadata, or searches films by title. TV content uses a series-title search with an explicit availability notice.
 - Stops using the old movie IMDb ID when you change the title or content type.
 - Supports manual entry when automatic detection fails or the browser restricts page access.
+
+| Platform | Audience / language | Purpose |
+| --- | --- | --- |
+| Letterboxd | Global | Movie reviews and ratings; limited TV availability; always available |
+| Reddit | Global, predominantly English | Film and TV discussion searches; optional |
+| Ekşi Sözlük | Türkiye, Turkish | Film and TV discussions, often in one series topic; optional |
 
 AfterWatch does not post comments or submit ratings. Those actions happen on the destination website.
 
@@ -33,11 +44,12 @@ No build step, Node.js installation, API key, account, or dependency installatio
 4. Choose **Load unpacked** and select the directory containing `manifest.json`.
 5. Pin the extension, open a movie, series, or episode detail page, and click AfterWatch.
 6. Check the title and content type. For episodes, scroll the selection panel to choose the discussion scope or correct the season and episode numbers.
-7. Choose Ekşi Sözlük or Letterboxd. Change the interface language using the selector beside the name.
+7. Choose an enabled discussion platform or Letterboxd. Change the interface language using the selector beside the name.
+8. Open the gear button for Settings. Enable or disable Reddit and Ekşi; use Back or Escape to return. Your selected title and episode numbers are preserved.
 
-If already installed from this directory, click **Reload** after updating it. The extension card should show version **1.1.0**. This version adds the `storage` permission solely for the local language preference.
+If already installed from this directory, click **Reload** after updating it. The extension card should show version **1.2.0**. The `storage` permission, added in 1.1.0, now saves local language and platform preferences. No new permission is required.
 
-Chrome 111 or later is required. Version 1.1.0 has automated popup and actual DOM extraction checks in Chrome; unpacked-extension loading and permissions still need a quick manual check after reloading. Edge uses compatible Chromium APIs but has not been independently tested here. Firefox and Safari are not currently verified.
+Chrome 111 or later is required. Automated popup and actual DOM extraction checks run in Chrome; unpacked-extension loading and permissions still need a quick manual check after reloading. Edge uses compatible Chromium APIs but has not been independently tested here. Firefox and Safari are not currently verified.
 
 ## Supported pages and limits
 
@@ -51,7 +63,7 @@ Ekşi topics can mix media discussions with other uses of the same word. Series 
 
 ## Privacy
 
-The extension uses `activeTab`, `scripting`, and `storage`. Storage contains only the interface language, without synchronization to a server. It has no background tracking, persistent browsing access, cookies access, telemetry, account system, or local watch history.
+The extension uses `activeTab`, `scripting`, and `storage`. Storage contains only interface-language and enabled-platform preferences, without synchronization to a server. First-run suggestions use the browser UI language, without IP geolocation or country tracking. It has no background tracking, persistent browsing access, cookies access, telemetry, account system, or local watch history.
 
 Opening the popup reads media metadata from the active page into memory. Clicking a destination sends the selected title, episode search text, or movie IMDb ID to that website through its URL. Normal destination-site privacy rules apply. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
@@ -65,9 +77,9 @@ npm run check
 npm run preview
 ```
 
-The preview runs at `http://127.0.0.1:4173/`. It simulates Chrome APIs and prints destination URLs instead of opening real tabs. It does not read your active browser page. Scenarios: `?scenario=raw`, `numeric`, `series`, `episode`, `missing-series`, `generic`, `protected`, `error`, and `hostile`. The preview stores a separate local language preference.
+The preview runs at `http://127.0.0.1:4173/`. It simulates Chrome APIs and prints destination URLs instead of opening real tabs. It does not read your active browser page. Scenarios: `?scenario=raw`, `numeric`, `series`, `episode`, `episode-heading`, `missing-series`, `generic`, `protected`, `error`, and `hostile`. The preview stores separate local language and platform preferences.
 
-For real extension testing, open `/fixtures/series` or `/fixtures/episode` on that server and click the unpacked extension. These synthetic pages contain standard JSON-LD and no video or real catalog entry.
+For real extension testing, open `/fixtures/series`, `/fixtures/episode`, or `/fixtures/episode-heading` on that server and click the unpacked extension. These synthetic pages contain media metadata and no video or catalog integration.
 
 Real extension loading and permission checks are separate from the preview and automated tests. See [AUDIT.md](AUDIT.md) for validation evidence and remaining checks.
 

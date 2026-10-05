@@ -1,12 +1,20 @@
 # Roadmap
 
-The first section records work delivered in version 1.1.0. Remaining sections are future proposals.
+The first two sections record work delivered in versions 1.1.0 and 1.2.0; subsequent sections are future proposals.
 
 ## Available in 1.1.0: TV, episodes, and languages
 
 Movie, TVSeries, and TVEpisode metadata are supported, including local graph references and series/season relationships. Users can correct the media type, title, season, and episode. Ekşi offers series-wide and episode-specific searches; neither guarantees spoiler-free discussions. Letterboxd TV searches include an availability notice.
 
 English remains the default interface, with Spanish, Portuguese, Italian, and Turkish available through a saved local preference. Media titles and destination-site content are not translated.
+
+## Available in 1.2.0: platform settings and episode fallback
+
+Letterboxd stays available. Settings can show or hide Reddit and Ekşi independently, with audience/language descriptions. Browser UI language supplies first-run suggestions. Saved choices take priority; existing users with a saved language keep Ekşi when upgrading. Reddit uses title or S01E02 discussion searches rather than guessing a community or thread URL.
+
+Episode extraction includes same-page Review itemReviewed metadata and conservative recognized heading/path patterns. Missing or conflicting evidence still requires manual correction.
+
+MUBI's verified current-film record supplies localized and original titles without translating them. Matching slugs/headings and size limits prevent unrelated page records from supplying alternatives.
 
 ## Next: detection coverage and destinations
 
