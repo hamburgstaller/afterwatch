@@ -6,7 +6,7 @@ const messages = {
     eyebrow:'THE CONVERSATION CONTINUES.', intro:"You've watched it. Now join the conversation.",
     language:'Language', selection:'Media selection', titleLabel:'Title to search', seriesTitleLabel:'Series title to search', placeholder:'e.g. Raw or a series title',
     typeLabel:'Content type', movie:'Movie', series:'TV series', episode:'TV episode',
-    scopeLabel:'Discussion scope', scopeSeries:'Entire series', scopeEpisode:'This episode',
+    scopeLabel:'Search scope', scopeSeries:'Entire series', scopeEpisode:'This episode',
     seasonLabel:'Season', episodeLabel:'Episode', otherTitles:'Other titles found on this page',
     reading:'Reading movie or TV information…', check:'Check the title and content type before opening a destination.',
     manual:'No single movie or TV title detected. Enter a title and choose its type.',
@@ -27,7 +27,7 @@ const messages = {
     eyebrow:'LA CONVERSACIÓN CONTINÚA.', intro:'Ya lo has visto. Ahora únete a la conversación.',
     language:'Idioma', selection:'Selección de contenido', titleLabel:'Título para buscar', seriesTitleLabel:'Título de la serie para buscar', placeholder:'p. ej., Raw o el título de una serie',
     typeLabel:'Tipo de contenido', movie:'Película', series:'Serie de TV', episode:'Episodio de TV',
-    scopeLabel:'Alcance de la conversación', scopeSeries:'Toda la serie', scopeEpisode:'Este episodio',
+    scopeLabel:'Alcance de la búsqueda', scopeSeries:'Toda la serie', scopeEpisode:'Este episodio',
     seasonLabel:'Temporada', episodeLabel:'Episodio', otherTitles:'Otros títulos encontrados en esta página',
     reading:'Leyendo información de cine o TV…', check:'Comprueba el título y el tipo de contenido antes de abrir un destino.',
     manual:'No se ha detectado un único título de cine o TV. Introduce un título y elige su tipo.',
@@ -48,7 +48,7 @@ const messages = {
     eyebrow:'A CONVERSA CONTINUA.', intro:'Você já assistiu. Agora participe da conversa.',
     language:'Idioma', selection:'Seleção de conteúdo', titleLabel:'Título para pesquisar', seriesTitleLabel:'Título da série para pesquisar', placeholder:'Ex.: Raw ou o título de uma série',
     typeLabel:'Tipo de conteúdo', movie:'Filme', series:'Série de TV', episode:'Episódio de TV',
-    scopeLabel:'Escopo da conversa', scopeSeries:'Série inteira', scopeEpisode:'Este episódio',
+    scopeLabel:'Escopo da pesquisa', scopeSeries:'Série inteira', scopeEpisode:'Este episódio',
     seasonLabel:'Temporada', episodeLabel:'Episódio', otherTitles:'Outros títulos encontrados nesta página',
     reading:'Lendo informações de cinema ou TV…', check:'Confira o título e o tipo de conteúdo antes de abrir um destino.',
     manual:'Não foi detectado um único título de cinema ou TV. Digite um título e escolha o tipo.',
@@ -69,7 +69,7 @@ const messages = {
     eyebrow:'LA CONVERSAZIONE CONTINUA.', intro:'Hai finito di guardare. Ora partecipa alla conversazione.',
     language:'Lingua', selection:'Selezione del contenuto', titleLabel:'Titolo da cercare', seriesTitleLabel:'Titolo della serie da cercare', placeholder:'Es. Raw o il titolo di una serie',
     typeLabel:'Tipo di contenuto', movie:'Film', series:'Serie TV', episode:'Episodio TV',
-    scopeLabel:'Ambito della conversazione', scopeSeries:'Intera serie', scopeEpisode:'Questo episodio',
+    scopeLabel:'Ambito della ricerca', scopeSeries:'Intera serie', scopeEpisode:'Questo episodio',
     seasonLabel:'Stagione', episodeLabel:'Episodio', otherTitles:'Altri titoli trovati in questa pagina',
     reading:'Lettura delle informazioni su film o TV…', check:'Controlla il titolo e il tipo di contenuto prima di aprire una destinazione.',
     manual:'Non è stato rilevato un unico titolo di film o TV. Inserisci un titolo e scegli il tipo.',
@@ -90,7 +90,7 @@ const messages = {
     eyebrow:'SOHBET DEVAM EDİYOR.', intro:'İzledin. Şimdi sohbete katıl.',
     language:'Dil', selection:'İçerik seçimi', titleLabel:'Aranacak başlık', seriesTitleLabel:'Aranacak dizi adı', placeholder:'Örn. Raw veya bir dizi adı',
     typeLabel:'İçerik türü', movie:'Film', series:'Dizi', episode:'Dizi bölümü',
-    scopeLabel:'Tartışma kapsamı', scopeSeries:'Dizinin geneli', scopeEpisode:'Bu bölüm',
+    scopeLabel:'Arama kapsamı', scopeSeries:'Dizinin geneli', scopeEpisode:'Bu bölüm',
     seasonLabel:'Sezon', episodeLabel:'Bölüm', otherTitles:'Bu sayfada bulunan diğer adlar',
     reading:'Film veya dizi bilgisi okunuyor…', check:'Yönlendirmeden önce başlığı ve içerik türünü kontrol et.',
     manual:'Tek bir film veya dizi başlığı algılanamadı. Bir başlık gir ve türünü seç.',
@@ -110,8 +110,8 @@ const messages = {
 };
 const settingsMessages = {
   en: {
-    settings:'Settings', back:'Back', platformHelp:'Choose which discussion platforms appear. Letterboxd is always available.',
-    global:'Global', alwaysAvailable:'Always available', redditRegion:'Global · predominantly English', eksiRegion:'Türkiye · Turkish',
+    settings:'Settings', back:'Back',
+    global:'Global', redditRegion:'Global · predominantly English', eksiRegion:'Türkiye · Turkish',
     redditSetting:'Search film and TV discussions. Result language and matching episode threads are not guaranteed.',
     eksiSetting:'Search Turkish film and TV discussions. A series often shares one topic across episodes.',
     letterboxdSetting:'Movie reviews and ratings. TV availability is limited.', redditDescription:'Find film and TV discussions',
@@ -120,8 +120,8 @@ const settingsMessages = {
     footer:'Opens a new tab only when you click. Saves language and platform preferences; no watch history.'
   },
   es: {
-    settings:'Ajustes', back:'Volver', platformHelp:'Elige qué plataformas de conversación mostrar. Letterboxd siempre está disponible.',
-    global:'Global', alwaysAvailable:'Siempre disponible', redditRegion:'Global · principalmente en inglés', eksiRegion:'Turquía · turco',
+    settings:'Ajustes', back:'Volver',
+    global:'Global', redditRegion:'Global · principalmente en inglés', eksiRegion:'Turquía · turco',
     redditSetting:'Busca conversaciones sobre cine y TV. No se garantiza el idioma ni encontrar un hilo del episodio.',
     eksiSetting:'Busca conversaciones sobre cine y TV en turco. Los episodios suelen compartir un tema de la serie.',
     letterboxdSetting:'Reseñas y valoraciones de películas. La disponibilidad de TV es limitada.', redditDescription:'Busca conversaciones sobre cine y TV',
@@ -130,8 +130,8 @@ const settingsMessages = {
     footer:'Solo abre una pestaña al hacer clic. Guarda idioma y plataformas; no tu historial de visionado.'
   },
   pt: {
-    settings:'Configurações', back:'Voltar', platformHelp:'Escolha quais plataformas de conversa mostrar. O Letterboxd está sempre disponível.',
-    global:'Global', alwaysAvailable:'Sempre disponível', redditRegion:'Global · principalmente em inglês', eksiRegion:'Turquia · turco',
+    settings:'Configurações', back:'Voltar',
+    global:'Global', redditRegion:'Global · principalmente em inglês', eksiRegion:'Turquia · turco',
     redditSetting:'Pesquise conversas sobre cinema e TV. O idioma e a existência de tópicos do episódio não são garantidos.',
     eksiSetting:'Pesquise conversas sobre cinema e TV em turco. Os episódios costumam compartilhar um tópico da série.',
     letterboxdSetting:'Resenhas e avaliações de filmes. A disponibilidade de TV é limitada.', redditDescription:'Encontre conversas sobre cinema e TV',
@@ -140,8 +140,8 @@ const settingsMessages = {
     footer:'Só abre uma aba quando você clica. Salva idioma e plataformas; nenhum histórico do que você assistiu.'
   },
   it: {
-    settings:'Impostazioni', back:'Indietro', platformHelp:'Scegli quali piattaforme di discussione mostrare. Letterboxd è sempre disponibile.',
-    global:'Globale', alwaysAvailable:'Sempre disponibile', redditRegion:'Globale · prevalentemente in inglese', eksiRegion:'Turchia · turco',
+    settings:'Impostazioni', back:'Indietro',
+    global:'Globale', redditRegion:'Globale · prevalentemente in inglese', eksiRegion:'Turchia · turco',
     redditSetting:'Cerca discussioni su film e TV. La lingua e la presenza di discussioni sull’episodio non sono garantite.',
     eksiSetting:'Cerca discussioni su film e TV in turco. Gli episodi spesso condividono un unico argomento sulla serie.',
     letterboxdSetting:'Recensioni e valutazioni di film. La disponibilità di TV è limitata.', redditDescription:'Trova discussioni su film e TV',
@@ -150,8 +150,8 @@ const settingsMessages = {
     footer:'Apre una scheda solo quando fai clic. Salva lingua e piattaforme; nessuna cronologia di visione.'
   },
   tr: {
-    settings:'Ayarlar', back:'Geri', platformHelp:'Gösterilecek tartışma platformlarını seç. Letterboxd her zaman kullanılabilir.',
-    global:'Global', alwaysAvailable:'Her zaman kullanılabilir', redditRegion:'Global · ağırlıklı İngilizce', eksiRegion:'Türkiye · Türkçe',
+    settings:'Ayarlar', back:'Geri',
+    global:'Global', redditRegion:'Global · ağırlıklı İngilizce', eksiRegion:'Türkiye · Türkçe',
     redditSetting:'Film ve dizi tartışmalarını ara. Sonuçların dili ve ilgili bölüm başlığının bulunması garanti değildir.',
     eksiSetting:'Türkçe film ve dizi tartışmalarını ara. Bölümler çoğunlukla aynı dizi başlığı altında tartışılır.',
     letterboxdSetting:'Film incelemeleri ve puanlama. Dizi desteği sınırlıdır.', redditDescription:'Film ve dizi tartışmalarını bul',
@@ -161,6 +161,38 @@ const settingsMessages = {
   }
 };
 for (const [language,catalog] of Object.entries(settingsMessages)) Object.assign(messages[language],catalog);
+const platformMessages = {
+  en:{platformHelp:'Choose your platforms and use the arrows to change their order.',moveUp:'Move {platform} up',moveDown:'Move {platform} down',noPlatforms:'All platforms are hidden. Enable a platform in Settings.',platformSaveFailed:'Platform settings could not be saved. Change a selection or order to retry.'},
+  es:{platformHelp:'Elige tus plataformas y usa las flechas para cambiar su orden.',moveUp:'Subir {platform}',moveDown:'Bajar {platform}',noPlatforms:'Todas las plataformas están ocultas. Activa una en Ajustes.',platformSaveFailed:'No se pudieron guardar los ajustes de plataformas. Cambia una selección o el orden para reintentar.'},
+  pt:{platformHelp:'Escolha suas plataformas e use as setas para mudar a ordem.',moveUp:'Mover {platform} para cima',moveDown:'Mover {platform} para baixo',noPlatforms:'Todas as plataformas estão ocultas. Ative uma nas Configurações.',platformSaveFailed:'Não foi possível salvar as configurações das plataformas. Altere uma seleção ou a ordem para tentar novamente.'},
+  it:{platformHelp:'Scegli le piattaforme e usa le frecce per cambiarne l’ordine.',moveUp:'Sposta {platform} in alto',moveDown:'Sposta {platform} in basso',noPlatforms:'Tutte le piattaforme sono nascoste. Attivane una nelle Impostazioni.',platformSaveFailed:'Impossibile salvare le impostazioni delle piattaforme. Cambia una scelta o l’ordine per riprovare.'},
+  tr:{platformHelp:'Platformlarını seç ve oklarla sıralamasını değiştir.',moveUp:'{platform} yukarı taşı',moveDown:'{platform} aşağı taşı',noPlatforms:'Tüm platformlar kapalı. Ayarlardan bir platformu aç.',platformSaveFailed:'Platform ayarları kaydedilemedi. Tekrar denemek için bir seçimi veya sıralamayı değiştir.'}
+};
+for (const [language,catalog] of Object.entries(platformMessages)) Object.assign(messages[language],catalog);
+const imdbMessages = {
+  en:{imdbSetting:'Movie, TV series and episode pages, ratings and reviews. Uses a matching IMDb ID when available; otherwise searches by title.',imdbDescription:'Explore movie, TV series and episode ratings',imdbDirect:'Open the identified IMDb page',imdbSearch:'Search IMDb by title',imdbEpisodeSearch:'Search IMDb by series and episode number; check the results'},
+  es:{imdbSetting:'Páginas, valoraciones y reseñas de películas, series y episodios. Usa un ID de IMDb coincidente si existe; si no, busca por título.',imdbDescription:'Explora valoraciones de películas, series y episodios',imdbDirect:'Abrir la página identificada de IMDb',imdbSearch:'Buscar en IMDb por título',imdbEpisodeSearch:'Buscar por serie y número de episodio; comprueba los resultados'},
+  pt:{imdbSetting:'Páginas, avaliações e resenhas de filmes, séries e episódios. Usa um ID do IMDb correspondente quando disponível; caso contrário, pesquisa pelo título.',imdbDescription:'Explore avaliações de filmes, séries e episódios',imdbDirect:'Abrir a página identificada do IMDb',imdbSearch:'Pesquisar no IMDb pelo título',imdbEpisodeSearch:'Pesquisar pela série e número do episódio; confira os resultados'},
+  it:{imdbSetting:'Pagine, voti e recensioni di film, serie ed episodi. Usa un ID IMDb corrispondente se disponibile; altrimenti cerca per titolo.',imdbDescription:'Esplora i voti di film, serie ed episodi',imdbDirect:'Apri la pagina IMDb identificata',imdbSearch:'Cerca su IMDb per titolo',imdbEpisodeSearch:'Cerca per serie e numero di episodio; controlla i risultati'},
+  tr:{imdbSetting:'Film, dizi ve bölüm sayfaları, puanlar ve incelemeler. Eşleşen IMDb kimliği varsa kullanır; yoksa başlıkla arar.',imdbDescription:'Film, dizi ve bölüm puanlarını incele',imdbDirect:'Tespit edilen IMDb sayfasını aç',imdbSearch:'IMDb’de başlıkla ara',imdbEpisodeSearch:'Dizi ve bölüm numarasıyla IMDb’de ara; sonuçları kontrol et'}
+};
+for (const [language,catalog] of Object.entries(imdbMessages)) Object.assign(messages[language],catalog);
+const playerMessages = {
+  en:{chooseType:'Choose the content type',sourcePlayer:'Player title'},
+  es:{chooseType:'Elige el tipo de contenido',sourcePlayer:'Título del reproductor'},
+  pt:{chooseType:'Escolha o tipo de conteúdo',sourcePlayer:'Título do player'},
+  it:{chooseType:'Scegli il tipo di contenuto',sourcePlayer:'Titolo del lettore'},
+  tr:{chooseType:'İçerik türünü seç',sourcePlayer:'Oynatıcı başlığı'}
+};
+const youtubeMessages = {
+  en:{sourceYouTube:'YouTube video title',suggestionsLabel:'Title suggestions — check before searching',restoreVideoTitle:'Restore video title'},
+  es:{sourceYouTube:'Título del vídeo de YouTube',suggestionsLabel:'Títulos sugeridos — comprueba antes de buscar',restoreVideoTitle:'Restaurar título del vídeo'},
+  pt:{sourceYouTube:'Título do vídeo do YouTube',suggestionsLabel:'Sugestões de título — confira antes de pesquisar',restoreVideoTitle:'Restaurar título do vídeo'},
+  it:{sourceYouTube:'Titolo del video di YouTube',suggestionsLabel:'Titoli suggeriti — controlla prima di cercare',restoreVideoTitle:'Ripristina titolo del video'},
+  tr:{sourceYouTube:'YouTube video başlığı',suggestionsLabel:'Başlık önerileri — aramadan önce kontrol et',restoreVideoTitle:'Video başlığını geri getir'}
+};
+for (const [language,catalog] of Object.entries(youtubeMessages)) Object.assign(messages[language],catalog);
+for (const [language,catalog] of Object.entries(playerMessages)) Object.assign(messages[language],catalog);
 for (const catalog of Object.values(messages)) Object.freeze(catalog);
 Object.freeze(messages);
 function supportedLanguage(language) { return Object.hasOwn(messages, language) ? language : 'en'; }

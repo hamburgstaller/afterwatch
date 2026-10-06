@@ -94,21 +94,35 @@ function collectPageData() {
   documents.forEach(node => walk(node));
   // MUBI exposes its current film in a bounded, page-embedded Next.js record.
   // Read that exact record only; never traverse recommendations or infer a title from its slug.
-  if (/^(?:www\.)?mubi\.com$/i.test(location.hostname) && meta('meta[property="og:type"]') === 'video.movie') {
+  const mubiPlayer = /^(?:www\.)?mubi\.com$/i.test(location.hostname) &&
+    location.pathname.match(/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/){0,2}films\/(\d+)\/player\/?$/i);
+  let mubiMismatch = false;
+  let mubiRecord = null;
+  if (/^(?:www\.)?mubi\.com$/i.test(location.hostname) && (mubiPlayer || meta('meta[property="og:type"]') === 'video.movie')) {
     try {
       const path = location.pathname.match(/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/){0,2}films\/([^/]+)\/?$/i);
       const script = document.querySelector('script#__NEXT_DATA__');
-      if (path && script?.type === 'application/json' && script.textContent.length <= 250000) {
-        const film = JSON.parse(script.textContent)?.props?.pageProps?.initFilm;
+      if ((path || mubiPlayer) && script?.type === 'application/json' && script.textContent.length <= 250000) {
+        const props = JSON.parse(script.textContent)?.props;
+        const records = [props?.pageProps?.initFilm, props?.initialProps?.pageProps?.initFilm].filter(Boolean);
+        const film = records[0];
+        const agrees = records.every(record => record.id === film.id && record.title === film.title && record.original_title === film.original_title);
+        const playerMatch = mubiPlayer && agrees && /^\d+$/.test(String(film?.id)) && String(film.id) === mubiPlayer[1];
+        mubiMismatch = Boolean(mubiPlayer && records.length && !playerMatch);
         const normalized = value => text(value).normalize('NFC').replace(/\s+/g, ' ').trim();
         const mainTitle = normalized(headingCopy?.textContent);
         const title = normalized(film?.title);
         const matches = value => normalized(value).toLocaleLowerCase('tr') === title.toLocaleLowerCase('tr');
-        if (title && title.length <= 180 && mainTitle && typeof film.slug === 'string' && decodeURIComponent(path[1]) === film.slug &&
-          (mainTitle === normalized(film.title_upcase) || matches(mainTitle))) {
+        if (agrees && title && title.length <= 180 && (playerMatch || path && mainTitle && typeof film.slug === 'string' && decodeURIComponent(path[1]) === film.slug &&
+          (mainTitle === normalized(film.title_upcase) || matches(mainTitle)))) {
           const alternateNames = names(film.original_title);
           const date = /^(?:18|19|20|21)\d{2}$/.test(String(film.year)) ? String(film.year) : '';
-          if (!media.length) media.push({type:'movie',primary:false,id:'',name:title,alternateNames,date,sameAs:[],url:''});
+          if (playerMatch) {
+            media.length = 0;
+            media.push({type:'movie',primary:true,id:'',name:title,alternateNames,date,sameAs:[],url:''});
+            mubiRecord = media[0];
+          }
+          else if (!media.length) media.push({type:'movie',primary:false,id:'',name:title,alternateNames,date,sameAs:[],url:''});
           else if (media.length === 1 && media[0].type === 'movie' &&
             [title,...alternateNames].some(name => normalized(name).toLocaleLowerCase('tr') === normalized(media[0].name).toLocaleLowerCase('tr')) &&
             (!date || !media[0].date || media[0].date.slice(0,4) === date)) {
@@ -121,10 +135,145 @@ function collectPageData() {
       }
     } catch { /* Invalid, missing or mismatched data leaves ordinary detection/manual entry intact. */ }
   }
-  return { heading: text(headingCopy?.textContent),
+  // Player routes have a separate identity boundary: detail-page metadata can be stale after SPA navigation.
+  const host = location.hostname.toLowerCase();
+  const pathname = location.pathname;
+  const netflix = /^(?:www\.)?netflix\.com$/.test(host) && /^\/(?:[a-z]{2}\/)?watch\/\d+\/?$/.test(pathname);
+  const disney = /^(?:(?:www\.)?apps\.|www\.)?disneyplus\.com$/.test(host) && /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?play\/[^/]+\/?$/i.test(pathname);
+  const primeHost = /^(?:www\.)?primevideo\.com$/.test(host) || ['com','co.uk','de','fr','it','es','co.jp','com.tr','com.br','com.au','in','ca'].some(suffix => host === `www.amazon.${suffix}` || host === `amazon.${suffix}`);
+  const primeDetail = primeHost && /^\/(?:-\/[a-z]{2}\/)?(?:gp\/video\/detail\/|detail\/|region\/[^/]+\/detail\/|dp\/)[a-z0-9]+\/?$/i.test(pathname);
+  const prime = primeDetail && Boolean(document.querySelector('.atvwebplayersdk-player-container video'));
+  const apple = host === 'tv.apple.com' && /^\/(?:[a-z]{2}\/)?(?:movie|show|episode)\//.test(pathname) && Boolean(document.querySelector('.video-player__tabs'));
+  const max = /^(?:(?:www|play)\.)?(?:max|hbomax)\.com$/.test(host) && /^\/(?:[a-z]{2}\/)?video\//.test(pathname);
+  const hulu = /^(?:www\.)?hulu\.com$/.test(host) && /^\/watch\/[^/]+\/?$/.test(pathname);
+  const peacock = /^(?:www\.)?peacocktv\.com$/.test(host) && /^\/watch\/playback\//.test(pathname) && !/\/(?:playlist|live)(?:\/|$)/.test(pathname);
+  const paramount = /^(?:www\.)?paramountplus\.com$/.test(host) && /^\/(?:[a-z]{2}\/)?(?:movies\/[^/]+|shows\/[^/]+\/video\/[^/]+)\/?$/.test(pathname) && Boolean(document.querySelector('.video__player-area video'));
+  const playerPage = Boolean(mubiPlayer || netflix || disney || prime || apple || max || hulu || peacock || paramount);
+  const normalized = value => text(value).normalize('NFC').replace(/\s+/g, ' ').trim();
+  let playerConflict = false;
+  const uniqueText = (selector, leaf = false) => {
+    const nodes = Array.from(document.querySelectorAll(selector));
+    if (nodes.length > 10) { playerConflict = true; return ''; }
+    const values = [...new Set(nodes.filter(node => !leaf || !node.children?.length).map(node => normalized(node.textContent)).filter(Boolean))];
+    if (values.length > 1) playerConflict = true;
+    return values.length === 1 && values[0].length <= 180 ? values[0] : '';
+  };
+  let player = null;
+  if (playerPage) {
+    const bound = mubiPlayer ? mubiRecord ? [mubiRecord] : [] : media.filter(item => samePage(item.url));
+    media.length = 0;
+    if (bound.length === 1) media.push(bound[0]);
+    const hasVideo = Boolean(document.querySelector('video'));
+    if (hasVideo && !mubiMismatch) {
+      let title = '', subtitle = '';
+      // Each player owns its selectors; shared validation and fallback stay outside the adapters.
+      const adapters = [
+        {applies:netflix,read:()=>({title:uniqueText('[data-uia="video-title"] h4') || uniqueText('[data-uia="video-title"]', true),subtitle:''})},
+        {applies:prime,read:()=>({title:uniqueText('.atvwebplayersdk-player-container .atvwebplayersdk-title-text'),
+          subtitle:uniqueText('.atvwebplayersdk-player-container .atvwebplayersdk-subtitle-text, .atvwebplayersdk-player-container .atvwebplayersdk-episode-info')})},
+        {applies:apple,read:()=>({title:uniqueText('.video-metadata .title'),subtitle:uniqueText('.video-metadata .subtitle-text')})},
+        {applies:hulu,read:()=>({title:uniqueText('#web-player-app .PlayerMetadata__titleText'),subtitle:uniqueText('#web-player-app .PlayerMetadata__subTitle')})},
+        {applies:peacock,read:()=>({title:uniqueText('[data-testid="metadata-title"], .playback-header__title, .playback-metadata__container-title'),subtitle:''})}
+      ];
+      const adapter = adapters.find(item => item.applies);
+      if (adapter) ({title,subtitle} = adapter.read());
+      // Browser media-session metadata is the final title source, never artwork, recommendations or URL slugs.
+      if (!title && !media.length && !playerConflict) {
+        try { title = normalized(navigator.mediaSession?.metadata?.title); } catch { /* Optional browser API. */ }
+      }
+      if (!title && mubiPlayer && !media.length && !playerConflict) {
+        // Accept an explicit film/year browser title, not a generic player label or a humanized URL.
+        const label = normalized(document.title);
+        const match = label.match(/^(.+?)\s*\(((?:18|19|20|21)\d{2})\)\s*(?:\|\s*MUBI|adlı filmi MUBI'de izle)$/i) ||
+          label.match(/^Watch\s+(.+?)\s*\(((?:18|19|20|21)\d{2})\)\s+on MUBI$/i);
+        if (match) title = normalized(match[1]);
+      }
+      if (!playerConflict && title && title.length <= 180 && !/^(?:MUBI|Netflix|Disney\+?|Prime Video|Apple TV\+?|Max|HBO Max|Hulu|Peacock)$/i.test(title)) {
+        player = {name:title,type:mubiPlayer ? 'movie' : '',subtitle};
+      }
+    }
+    if (playerConflict) media.length = 0;
+  }
+  let untypedTitle = '';
+  if (!playerPage && document.querySelectorAll('h1').length === 1) {
+    const name = normalized(headingCopy?.textContent);
+    if (primeDetail && !media.length) {
+      const images = heading?.querySelectorAll('img') || [];
+      const title = name || (images.length === 1 ? normalized(images[0].getAttribute('alt')) : '');
+      if (title && title.length <= 180) {
+        if (document.querySelector('#tab-selector-episodes[role="tab"]')) media.push({type:'series',name:title,alternateNames:[],date:'',sameAs:[],url:''});
+        else untypedTitle = title;
+      }
+    }
+    if (host === 'tv.apple.com' && !media.length && name && name.length <= 180) {
+      const path = pathname.match(/^\/(?:[a-z]{2}\/)?(movie|show)\/[^/]+\/umc\.cmc\.[a-z0-9]+\/?$/i);
+      if (path) media.push({type:path[1] === 'movie' ? 'movie' : 'series',name,alternateNames:[],date:'',sameAs:[],url:''});
+    }
+    if (/^(?:www\.)?disneyplus\.com$/.test(host) && /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?browse\/entity-[a-z0-9-]+\/?$/i.test(pathname) && media.length === 1 && name) {
+      const record = media[0];
+      const label = normalized(record.name).replace(/\s*\|\s*Disney\+\s*$/i,'');
+      const labels = [name,`Watch ${name}`,`Ver ${name}`,`Assista ${name}`,`Assista a ${name}`,`Guarda ${name}`,`${name} İzleyin`];
+      if (['movie','series'].includes(record.type) && labels.some(value => value.toLocaleLowerCase('tr') === label.toLocaleLowerCase('tr'))) record.name = name;
+    }
+  }
+  // YouTube IDs identify uploads, not movies. Use only sources bound to this upload.
+  const youtubeHost = /^(?:www\.|m\.)?youtube\.com$/.test(host);
+  let youtube = null;
+  if (youtubeHost) {
+    let id = '';
+    try {
+      const url = new URL(location.href);
+      const ids = pathname === '/watch' ? url.searchParams.getAll('v') : [];
+      const pathId = pathname.match(/^\/(?:embed|shorts|live)\/([\w-]{11})\/?$/)?.[1];
+      const candidate = pathname === '/watch' && ids.length === 1 ? ids[0] : pathId;
+      if (/^[\w-]{11}$/.test(candidate || '')) id = candidate;
+    } catch { /* Malformed or ambiguous routes remain manual. */ }
+    let name = '', conflict = false;
+    if (id) {
+      const headings = Array.from(document.querySelectorAll(`ytd-watch-flexy[video-id="${id}"]:not([hidden]) #title h1`));
+      const values = [...new Set(headings.slice(0,10).map(node => normalized(node.textContent)).filter(Boolean))];
+      if (headings.length > 10 || values.length > 1) conflict = true;
+      else name = values[0] || '';
+      if (meta('meta[itemprop="videoId"]') === id) {
+        const candidate = normalized(meta('meta[property="og:title"]'));
+        if (name && candidate && name !== candidate) conflict = true;
+        else name ||= candidate;
+      }
+    }
+    youtube = {id,name:conflict || name.length > 180 ? '' : name,conflict};
+  }
+  return { heading: text(headingCopy?.textContent), headingCount:Math.max(heading ? 1 : 0,document.querySelectorAll('h1').length),
     alternateHeading: text(small?.textContent), pageTitle: text(document.title),
     ogTitle: meta('meta[property="og:title"]'), ogType: meta('meta[property="og:type"]'),
-    pathname: text(location.pathname), media };
+    pathname: text(location.pathname), media, playerPage, player, disneyPlayer:disney, untypedTitle, youtube };
+}
+
+// One bounded MAIN-world read of the current upload's title. No streaming, account or comment data.
+function collectYouTubePlayerData() {
+  if (!/^(?:www\.|m\.)?youtube\.com$/i.test(location.hostname)) return null;
+  try {
+    const url = new URL(location.href);
+    const ids = url.pathname === '/watch' ? url.searchParams.getAll('v') : [];
+    const id = url.pathname === '/watch' && ids.length === 1 ? ids[0] : url.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]{11})\/?$/)?.[1];
+    if (!/^[\w-]{11}$/.test(id || '')) return {id:'',name:''};
+    const details = window.ytInitialPlayerResponse?.videoDetails;
+    const name = details?.videoId === id && typeof details.title === 'string' && details.title.length <= 180 ? details.title : '';
+    return {id,name};
+  } catch { return null; }
+}
+
+// Only Disney's custom player metadata needs the page's MAIN world. One read, no page changes or API requests.
+function collectDisneyPlayerData() {
+  if (!/^(?:(?:www\.)?apps\.|www\.)?disneyplus\.com$/i.test(location.hostname) ||
+    !/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?play\/[^/]+\/?$/i.test(location.pathname) || !document.querySelector('video')) return null;
+  try {
+    const players = document.querySelectorAll('disney-web-player');
+    if (players.length !== 1) return null;
+    const metadata = players[0].mediaPlayer?.mediaPlaybackCriteria?.metadata;
+    const text = value => typeof value === 'string' && value.length <= 180 ? value : '';
+    const name = text(metadata?.title?.text);
+    return name ? {name,type:'',subtitle:text(metadata?.subtitle?.text),pathname:location.pathname} : null;
+  } catch { return null; }
 }
 
 function normalizeText(value) {
@@ -141,7 +290,7 @@ function cleanTitle(value) {
   let previous;
   do {
     previous = title;
-    title = title.replace(/\s(?:(?:full\s*)?hd\s*izle|izle|türkçe\s*dublaj|türkçe\s*altyazılı|altyazılı|1080p|720p|full\s*film|sansürsüz|hd)\s*$/iu, '').trim();
+    title = title.replace(/\s(?:(?:full\s*)?hd\s*[iİı]zle|[iİı]zle|türkçe\s*dublaj|türkçe\s*altyazılı|altyazılı|1080p|720p|full\s*film|sansürsüz|hd)\s*$/iu, '').trim();
     title = title.replace(/\s*\((?:18|19|20|21)\d{2}\)\s*$/, '').trim();
   } while (previous !== title);
   return title;
@@ -171,7 +320,7 @@ function episodePattern(value) {
   const patterns = [
     /^(.+?)\s+(\d{1,4})\.?\s*sezon\s+(\d{1,4})\.?\s*b[öo]l[üu]m$/iu,
     /^(.+?)\s+(?:season|temporada|stagione)\s*(\d{1,4})\s*[,.:–—-]?\s*(?:episode|episodio|episódio|capítulo|capitulo)\s*(\d{1,4})$/iu,
-    /^(.+?)\s+(?:S(\d{1,4})\s*E(\d{1,4})|(\d{1,4})x(\d{1,4}))$/iu
+    /^(.+?)\s+(?:S(\d{1,4})\s*:?\s*E(\d{1,4})|(\d{1,4})x(\d{1,4}))$/iu
   ];
   for (const pattern of patterns) {
     const match = title.match(pattern);
@@ -189,34 +338,104 @@ function titleSlug(value) {
     .replace(/ı/g, 'i').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
 }
 
-function episodeFromPage(data, metadataTitles, season, episode) {
-  const patterns = [data.heading, data.ogTitle, data.pageTitle].map(episodePattern).filter(Boolean);
-  let pathPattern;
+function youTubeSuggestions(value) {
+  const raw = normalizeText(value);
+  if (!isValidTitle(raw)) return [];
+  let title = raw, movieLabel = false, year = '';
+  let previous;
+  do {
+    previous = title;
+    const suffix = title.match(/(?:\s*[|–—-]\s*|\s+)(full movie|full film|complete movie|película completa|filme completo|film completo|tek parça|türkçe dublaj|türkçe altyazılı|full hd|1080p|720p|4k)\s*$/iu);
+    if (suffix) {
+      movieLabel ||= /^(?:full movie|full film|complete movie|película completa|filme completo|film completo)$/iu.test(suffix[1]);
+      title = title.slice(0,suffix.index).trim();
+    }
+    const dated = title.match(/\s*\(((?:18|19|20|21)\d{2})\)\s*$/);
+    if (dated) { year = dated[1]; title = title.slice(0,dated.index).trim(); }
+  } while (title !== previous);
+  if (!isValidTitle(title)) return [];
+  const episode = !title.includes('|') ? episodePattern(title) : null;
+  if (episode) return [{...episode,type:'episode',year:''}];
+  // A Turkish absolute episode number is useful, but it does not prove a season number.
+  const partial = title.match(/^(.+?)\s+(\d{1,4})\.?\s*b[öo]l[üu]m$/iu);
+  if (partial && isValidTitle(normalizeText(partial[1])) && episodeNumber(partial[2])) {
+    return [{title:normalizeText(partial[1]),type:'episode',season:'',episode:episodeNumber(partial[2]),year:''}];
+  }
+  return title !== raw ? [{title,type:movieLabel ? 'movie' : '',season:'',episode:'',year}] : [];
+}
+
+function episodePath(value) {
   try {
-    // Read only the last path segment; never query parameters, fragments or other page links.
-    const segment = decodeURIComponent(String(data.pathname || '').slice(0,2000).split('/').filter(Boolean).pop() || '');
+    // Pathname only: query values, fragments, episode lists and unrelated links are not evidence.
+    const path = String(value || '');
+    if (path.length > 2000 || /[?#]/.test(path)) return null;
+    const nested = path.match(/^\/(?:dizi|series|shows|tv)\/([^/]+)\/(?:sezon|season|temporada|stagione)-(\d{1,4})\/(?:bolum|episode|episodio|capitulo)-(\d{1,4})(?:-(?:hd\d{1,3}|1080p|720p|izle|watch))?\/?$/iu);
+    if (nested) {
+      const season = episodeNumber(nested[2],true), episode = episodeNumber(nested[3]);
+      const title = decodeURIComponent(nested[1]);
+      if (season !== '' && episode !== '' && !/[/?#]/.test(title)) return {title,season,episode,nested:true};
+      return null;
+    }
+    const segment = decodeURIComponent(path.split('/').filter(Boolean).pop() || '');
     const match = segment.match(/^(.+?)-(?:s(\d{1,4})e(\d{1,4})|(\d{1,4})-sezon-(\d{1,4})-bolum|(?:season|temporada|stagione)-(\d{1,4})-(?:episode|episodio|capitulo)-(\d{1,4}))(?:-(?:\d+-)?(?:izle|watch)(?:-\d+)?)?$/iu);
     if (match) {
       const s = episodeNumber(match[2] ?? match[4] ?? match[6], true);
       const e = episodeNumber(match[3] ?? match[5] ?? match[7]);
-      if (s !== '' && e !== '') pathPattern = {title:match[1],season:s,episode:e};
+      if (s !== '' && e !== '') return {title:match[1],season:s,episode:e,nested:false};
     }
   } catch { /* Malformed escapes cannot invalidate other page evidence. */ }
+  return null;
+}
+
+function episodeFromPage(data, metadataTitles, season, episode) {
+  const patterns = [data.heading, data.ogTitle, data.pageTitle].map(episodePattern).filter(Boolean);
+  const pathPattern = episodePath(data.pathname);
+  const samePathTitle = title => {
+    const slug = titleSlug(pathPattern?.title), candidate = titleSlug(title);
+    return candidate === slug || Boolean(pathPattern?.nested && candidate === slug.replace(/-izle(?:-\d+)?$/u,''));
+  };
   // A URL slug cannot supply a properly written series title by itself.
-  const pathTitle = pathPattern && metadataTitles.find(title => titleSlug(title) === titleSlug(pathPattern.title));
+  const pathTitle = pathPattern && metadataTitles.find(samePathTitle);
   const candidate = patterns[0] || (pathTitle ? {...pathPattern,title:pathTitle} : null);
   if (!candidate) return null;
   const matches = item => titleSlug(item.title) === titleSlug(candidate.title) &&
     item.season === candidate.season && item.episode === candidate.episode;
-  if (!patterns.every(matches) || pathPattern && !matches(pathPattern)) return null;
+  if (!patterns.every(matches) || pathPattern && (!samePathTitle(candidate.title) || pathPattern.season !== candidate.season || pathPattern.episode !== candidate.episode)) return null;
   if (metadataTitles.length && !metadataTitles.some(title => titleSlug(title) === titleSlug(candidate.title))) return null;
   if (season !== '' && season !== candidate.season || episode !== '' && episode !== candidate.episode) return null;
   return candidate;
 }
 
 function detectMedia(data) {
-  const empty = { type:'', title:'', titles:[], imdbId:'', year:'', source:'', sourceKey:'', season:'', episode:'', episodeTitle:'' };
+  const empty = { type:'', title:'', titles:[], imdbId:'', seriesImdbId:'', episodeImdbId:'', year:'', source:'', sourceKey:'', season:'', episode:'', episodeTitle:'' };
   if (!data || typeof data !== 'object') return empty;
+  if (data.youtube) {
+    const title = normalizeText(data.youtube.name);
+    if (!/^[\w-]{11}$/.test(data.youtube.id || '') || data.youtube.conflict || !isValidTitle(title)) return empty;
+    return {...empty,title,titles:[title],sourceKey:'sourceYouTube',source:'YouTube video title',suggestions:youTubeSuggestions(title)};
+  }
+  if (data.playerPage) {
+    const player = data.player;
+    const bound = Array.isArray(data.media) && data.media.length === 1 ? detectMedia({media:data.media}) : empty;
+    if (!player) return bound;
+    const title = normalizeText(player.name);
+    if (!isValidTitle(title)) return empty;
+    // A current player title takes precedence over stale detail metadata. Never transfer a conflicting ID.
+    const subtitle = normalizeText(player.subtitle);
+    const match = subtitle.match(/^(?:S(\d{1,4})\s*[:,·]?\s*E(\d{1,4})|(?:Season|Temporada|Stagione)\s*(\d{1,4})\s*[,·:-]?\s*(?:Episode|Episodio|Episódio|Capítulo)\s*(\d{1,4})|(\d{1,4})\.?\s*Sezon\s*[,·:-]?\s*(\d{1,4})\.?\s*B[öo]l[üu]m)(?:(?:\s*[-–—:·,]\s*|\s+)(.*))?$/iu);
+    const parsedSeason = match ? episodeNumber(match[1] ?? match[3] ?? match[5], true) : '';
+    const parsedEpisode = match ? episodeNumber(match[2] ?? match[4] ?? match[6]) : '';
+    const numbered = parsedSeason !== '' && parsedEpisode !== '';
+    const season = numbered ? parsedSeason : '';
+    const episode = numbered ? parsedEpisode : '';
+    const type = numbered ? 'episode' : player.type === 'movie' ? 'movie' : '';
+    if (bound.titles.some(value => value.toLocaleLowerCase('tr') === title.toLocaleLowerCase('tr')) &&
+      (!numbered || bound.type === 'episode' && (!bound.season || bound.season === season) && (!bound.episode || bound.episode === episode))) {
+      return numbered ? {...bound,season,episode,episodeTitle:(match[7] || bound.episodeTitle).slice(0,180)} : bound;
+    }
+    return {...empty,title,titles:[title],type,season,episode,
+      episodeTitle:type === 'episode' ? (match[7] || '').slice(0,180) : '',sourceKey:'sourcePlayer',source:'Player title'};
+  }
   const candidates = Array.isArray(data.media) ? data.media : (Array.isArray(data.movies) ? data.movies : []).map(movie => ({...movie,type:'movie'}));
   const unique = new Map();
   for (const item of candidates.slice(0, 20)) {
@@ -241,8 +460,16 @@ function detectMedia(data) {
     selected = episode;
   }
   const ogType = {'video.movie':'movie','video.tv_show':'series','video.episode':'episode'}[data.ogType];
-  const type = selected?.type || ogType;
-  if (!type) return empty;
+  // Without valid metadata, require a complete primary heading corroborated by a typed episode route.
+  // A title pattern alone must not reclassify an article, collection or movie.
+  const routeEpisode = !selected && (!data.ogType || data.ogType === 'website') &&
+    (data.headingCount === undefined || data.headingCount === 1) && episodePath(data.pathname)?.nested &&
+    episodePattern(data.heading) ? episodeFromPage(data,[], '', '') : null;
+  const type = selected?.type || ogType || (routeEpisode ? 'episode' : '');
+  if (!type) {
+    const title = normalizeText(data.untypedTitle);
+    return !items.length && isValidTitle(title) ? {...empty,title,titles:[title],sourceKey:'sourceHeading',source:'Page heading'} : empty;
+  }
   const movie = type === 'episode' ? selected?.series : selected;
   const sameTitle = (left, right) => cleanTitle(left).toLocaleLowerCase('tr') === cleanTitle(right).toLocaleLowerCase('tr');
   const metadataTitles = movie ? [movie.name, ...(movie.alternateNames || [])] : type === 'episode' ? [] : [data.ogTitle];
@@ -274,9 +501,19 @@ function detectMedia(data) {
   }
   const identityUrls = type === 'movie' && movie ? [movie.url, ...(movie.sameAs || [])] : [];
   const ids = [...new Set(identityUrls.map(imdbIdFromUrl).filter(Boolean))];
+  // Typed metadata binds each identity to its own work. Never reuse an episode ID for its series.
+  const uniqueId = item => {
+    const values = item ? [item.id,item.url,...(item.sameAs || [])] : [];
+    const found = [...new Set(values.map(imdbIdFromUrl).filter(Boolean))];
+    return found.length === 1 ? found[0] : '';
+  };
+  const seriesImdbId = type === 'series' || type === 'episode' ? uniqueId(movie) : '';
+  const episodeImdbId = type === 'episode' ? uniqueId(selected) : '';
   const headingYear = normalizeText(hasAlternateHeading ? data.alternateHeading : data.heading).match(/\(((?:18|19|20|21)\d{2})\)\s*$/)?.[1];
   const dateYear = (type === 'episode' ? selected?.date : movie?.date)?.match(/^((?:18|19|20|21)\d{2})(?:-|$)/)?.[1];
   return { type, title:titles[0] || '', titles:titles.slice(0, 6), imdbId:ids.length === 1 ? ids[0] : '',
+    seriesImdbId:seriesImdbId === episodeImdbId ? '' : seriesImdbId,
+    episodeImdbId:episodeImdbId === seriesImdbId ? '' : episodeImdbId,
     year:(type === 'episode' ? '' : headingYear) || dateYear || '',
     season, episode,
     episodeTitle:type === 'episode' ? normalizeText(selected?.name || data.heading || data.ogTitle).slice(0,180) : '',
@@ -306,6 +543,13 @@ function destinationUrl(destination, value, imdbId = '', type = 'movie', context
   if (!['movie','series','episode'].includes(type)) throw new Error('Invalid media type');
   if (destination === 'eksi') return `https://eksisozluk.com/?q=${encodeURIComponent(discussionQuery(title,type,context))}`;
   if (destination === 'reddit') return `https://www.reddit.com/search/?q=${encodeURIComponent(discussionQuery(title,type,context,'reddit'))}`;
+  if (destination === 'imdb') {
+    // Episode search needs both explicit numbers even when metadata supplies an ID.
+    const query = type === 'episode' && context.scope === 'episode'
+      ? discussionQuery(title,type,context,'reddit').replace(/ discussion$/, '') : title;
+    if (/^tt\d{7,12}$/.test(imdbId)) return `https://www.imdb.com/title/${imdbId}/`;
+    return `https://www.imdb.com/find/?q=${encodeURIComponent(query)}&s=tt`;
+  }
   if (destination === 'letterboxd') {
     if (type === 'movie' && /^tt\d{7,12}$/.test(imdbId)) return `https://letterboxd.com/imdb/${imdbId}/`;
     const query = encodeURIComponent(title).replace(/\./g, '%2E');
@@ -314,6 +558,6 @@ function destinationUrl(destination, value, imdbId = '', type = 'movie', context
   throw new Error('Unknown destination');
 }
 
-const FilmTools = Object.freeze({ collectPageData, normalizeText, cleanTitle, isValidTitle,
+const FilmTools = Object.freeze({ collectPageData, collectDisneyPlayerData, collectYouTubePlayerData, youTubeSuggestions, normalizeText, cleanTitle, isValidTitle,
   imdbIdFromUrl, episodeNumber, detectMedia, detectFilm, discussionQuery, destinationUrl });
 if (typeof module !== 'undefined' && module.exports) module.exports = FilmTools;

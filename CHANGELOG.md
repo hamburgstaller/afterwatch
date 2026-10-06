@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.3.0 — 2026-10-06
+
+- Detect episodes when a single primary heading agrees with a nested series/season/episode route, even if JSON-LD is malformed and Open Graph is absent. Keep conflicts, articles, movies and incomplete labels out of this fallback. Clean Turkish dotted-I watch suffixes without changing meaningful title words. No title/ID/year is guessed from malformed data.
+- Add optional, orderable IMDb navigation for movies, TV series and episodes, with descriptions in all five languages. New installations enable IMDb; upgrades preserve existing choices with IMDb off.
+- Keep series and episode IMDb identities separate. Use one matching typed metadata ID for direct navigation, otherwise a title search; episode scope adds explicit S01E02 numbers. Edited titles/types/numbers cannot reuse a previous episode identity. Missing numbers require correction; search results are not verified matches.
+- Upgrade platformSettings to version 2 for four destinations. Preserve valid version 1 visibility and order, including all-disabled choices, and append IMDb without enabling it. Bound longer destination lists with scrolling.
+- Let users enable/disable Letterboxd, enabled by default, alongside Reddit and Ekşi. Show a helpful empty state when all platforms are disabled and block hidden destinations in their event handlers.
+- Add accessible up/down controls to arrange all four platforms. Settings and destination DOM order match; disabled platforms keep their position, and keyboard focus remains on the moved platform.
+- Save visibility and order together in a versioned local platformSettings preference. Migrate old discussion choices once with Letterboxd enabled; preserve later explicit disable choices. Delayed loading and queued writes preserve manual edits and untouched saved choices/order.
+
+- Add YouTube upload-ID-bound DOM and optional MAIN-world title readers. Preserve raw video titles and offer selectable movie/episode title suggestions in all five languages; restore the original title at any time.
+- Require a content-type choice on YouTube until a suggestion or manual choice is selected. Leave absent seasons empty, never infer release dates from upload dates, and never use video IDs as movie identities.
+- Reject stale/conflicting YouTube records and navigation races. Do not read descriptions, recommendations, comments, account data, or streaming data; no API key or network lookup is added.
+- Separate platform playback selectors into local adapter readers with shared validation/fallback, and prevent conflicting player controls from falling back to stale structured titles.
+
+- Recognize MUBI's numeric film-player route and validate the current embedded film by its ID, including the legacy Next.js record location. Keep localized/original titles and reject conflicting or stale records.
+- Read scoped playback titles on Netflix, Prime Video/Amazon, Apple TV, Hulu, and Peacock. Use browser media-session titles on recognized playback pages, including Max and Disney+, when available.
+- Read Disney's current custom-player title/subtitle once in the MAIN world; no page changes, timers, network requests, or additional permissions.
+- Separate playback detection from potentially stale detail-page metadata. Never infer titles from slugs/IDs or classify an unknown player title as a movie. Require an explicit content-type choice when necessary.
+- Recognize bounded, explicit episode labels in player subtitles without inventing missing numbers.
+- Fix observed public detail-page cases: Prime title artwork and episode tabs, agreeing Disney promotional title wrappers, and Apple movie/show routes with a canonical content identifier.
+- Add detection, popup, race, privacy, and failure regressions. Authenticated playback still needs manual verification; see [streaming validation](STREAMING.md).
+
 ## 1.2.0 — 2026-10-05
 
 - Suggest MUBI's page-provided original title as an alternative while preserving the page's localized primary title. Validate the film slug and heading; ignore unrelated or missing records.

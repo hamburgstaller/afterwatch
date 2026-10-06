@@ -1,6 +1,6 @@
 # Roadmap
 
-The first two sections record work delivered in versions 1.1.0 and 1.2.0; subsequent sections are future proposals.
+The first three sections record work delivered in versions 1.1.0, 1.2.0 and 1.3.0; subsequent sections are future proposals.
 
 ## Available in 1.1.0: TV, episodes, and languages
 
@@ -15,6 +15,12 @@ Letterboxd stays available. Settings can show or hide Reddit and Ekşi independe
 Episode extraction includes same-page Review itemReviewed metadata and conservative recognized heading/path patterns. Missing or conflicting evidence still requires manual correction.
 
 MUBI's verified current-film record supplies localized and original titles without translating them. Matching slugs/headings and size limits prevent unrelated page records from supplying alternatives.
+
+## Available in 1.3.0: playback, YouTube, IMDb and platform ordering
+
+Version 1.3.0 adds numeric MUBI player identity checks, separate player readers for major streaming layouts, and the observed Prime/Disney/Apple detail fixes. YouTube keeps raw upload titles and offers user-selected movie/episode title suggestions without an API or guessed season. See [STREAMING.md](STREAMING.md) for sources, evidence, and remaining authenticated/unpacked manual checks. Nested episode routes can corroborate a complete primary heading even without usable metadata.
+
+Settings also lets users show/hide and reorder all four destinations, including Letterboxd and IMDb. IMDb supports movies, series and episodes with separate typed identities and title-search fallback. New installs enable it; upgrades retain saved choices with IMDb off. A versioned local preference preserves order and visibility, with migration from older settings. No new permission is required.
 
 ## Next: detection coverage and destinations
 

@@ -12,6 +12,8 @@ const alternativeEl = document.getElementById('alternatives');
 const eksiBtn = document.getElementById('eksiBtn');
 const redditBtn = document.getElementById('redditBtn');
 const letterboxdBtn = document.getElementById('letterboxdBtn');
+const imdbBtn = document.getElementById('imdbBtn');
+const imdbRouteEl = document.getElementById('imdbRoute');
 const routeEl = document.getElementById('letterboxdRoute');
 const eksiRouteEl = document.getElementById('eksiRoute');
 const languageStatusEl = document.getElementById('languageStatus');
@@ -20,7 +22,15 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const settingsStatusEl = document.getElementById('settingsStatus');
 const watchPanel = document.getElementById('watchPanel');
-const platformInputs = {eksi:document.getElementById('eksiEnabled'),reddit:document.getElementById('redditEnabled')};
+const platformIds = ['eksi','reddit','letterboxd','imdb'];
+const platformNames = {eksi:'Ekşi Sözlük',reddit:'Reddit',letterboxd:'Letterboxd',imdb:'IMDb'};
+const platformButtons = {eksi:eksiBtn,reddit:redditBtn,letterboxd:letterboxdBtn,imdb:imdbBtn};
+const platformInputs = Object.fromEntries(platformIds.map(id => [id,document.getElementById(`${id}Enabled`)]));
+const platformEdits = new Map();
+let platformOrder = [...platformIds];
+let renderedOrder = '';
+let orderRevision = 0;
+let pendingPlatformSave = false;
 let browserLanguage = 'en';
 try {
   const locale = chrome.i18n?.getUILanguage?.();
@@ -32,56 +42,92 @@ let edited = false;
 let language = browserLanguage;
 let languageRevision = 0;
 let languageSaveFailed = false;
-let enabledPlatforms = browserLanguage === 'tr' ? ['eksi'] : ['reddit'];
+let enabledPlatforms = [browserLanguage === 'tr' ? 'eksi' : 'reddit','letterboxd','imdb'];
 let platformRevision = 0;
 let platformSaveFailed = false;
 let preferencesLoadFailed = false;
 let preferencesReady = false;
 let saveQueue = Promise.resolve();
 let statusKey = 'reading';
+const suggestionRenderers = [];
 
 const t = (key, params) => AfterWatchI18n.translate(language,key,params);
 function currentTitle() { return FilmTools.normalizeText(titleInput.value); }
 function context() { return {scope:scopeSelect.value,season:seasonInput.value,episode:episodeInput.value}; }
 function usesIdentity() { return Boolean(typeSelect.value === 'movie' && detected.type === 'movie' && detected.imdbId && currentTitle() === detected.title); }
+function imdbIdentity() {
+  const type = typeSelect.value;
+  if (type !== detected.type || currentTitle() !== detected.title) return '';
+  if (type === 'movie') return detected.imdbId;
+  if (type === 'series' || type === 'episode' && scopeSelect.value !== 'episode') return detected.seriesImdbId;
+  return type === 'episode' && FilmTools.episodeNumber(seasonInput.value,true) === detected.season &&
+    FilmTools.episodeNumber(episodeInput.value) === detected.episode ? detected.episodeImdbId : '';
+}
 function validDiscussion() {
+  if (!['movie','series','episode'].includes(typeSelect.value)) return false;
   try { FilmTools.discussionQuery(currentTitle(),typeSelect.value,context()); return true; } catch { return false; }
 }
 function refresh() {
   const type = typeSelect.value;
   const valid = FilmTools.isValidTitle(currentTitle());
-  for (const [platform, button] of [['eksi',eksiBtn],['reddit',redditBtn]]) {
+  const validType = ['movie','series','episode'].includes(type);
+  for (const [platform, button] of Object.entries(platformButtons)) {
     button.hidden = !enabledPlatforms.includes(platform);
-    button.disabled = opening || !preferencesReady || button.hidden || !validDiscussion();
+    button.disabled = opening || !preferencesReady || button.hidden || (platform === 'letterboxd' ? !valid || !validType : !validDiscussion());
     platformInputs[platform].checked = enabledPlatforms.includes(platform);
   }
-  watchPanel.classList.toggle('many-platforms',enabledPlatforms.length > 1);
-  letterboxdBtn.disabled = opening || !valid;
-  routeEl.textContent = t(type === 'movie' ? usesIdentity() ? 'letterboxdId' : 'letterboxdSearch' : 'letterboxdTv');
+  watchPanel.classList.toggle('many-platforms',enabledPlatforms.length > 2);
+  watchPanel.classList.toggle('four-platforms',enabledPlatforms.length > 3);
+  document.getElementById('noPlatforms').hidden = !preferencesReady || enabledPlatforms.length !== 0;
+  document.getElementById('destinations').hidden = enabledPlatforms.length === 0;
+  renderPlatformOrder();
+  routeEl.textContent = t(!validType ? 'chooseType' : type === 'movie' ? usesIdentity() ? 'letterboxdId' : 'letterboxdSearch' : 'letterboxdTv');
+  imdbRouteEl.textContent = t(!validType ? 'chooseType' : !validDiscussion() ? 'episodeMissing' : imdbIdentity() ? 'imdbDirect' :
+    type === 'episode' && scopeSelect.value === 'episode' ? 'imdbEpisodeSearch' : 'imdbSearch');
   document.getElementById('episodeControls').hidden = type !== 'episode';
-  document.getElementById('spoilerNote').hidden = type === 'movie';
+  document.getElementById('spoilerNote').hidden = !validType || type === 'movie';
   document.getElementById('titleLabel').textContent = t(type === 'episode' ? 'seriesTitleLabel' : 'titleLabel');
   const season = FilmTools.episodeNumber(seasonInput.value,true);
   const episode = FilmTools.episodeNumber(episodeInput.value);
-  eksiRouteEl.textContent = type === 'movie' ? '' : type === 'episode' && scopeSelect.value === 'episode'
+  eksiRouteEl.textContent = !validType || type === 'movie' ? '' : type === 'episode' && scopeSelect.value === 'episode'
     ? season === '' || episode === '' ? t('episodeMissing') : t('eksiEpisode',{title:currentTitle(),season,episode})
     : t('eksiSeries');
   redditRouteEl.textContent = type === 'episode' && scopeSelect.value === 'episode' && (season === '' || episode === '')
-    ? t('episodeMissing') : valid ? t('redditSearch',{query:FilmTools.discussionQuery(currentTitle(),type,context(),'reddit')}) : '';
+    ? t('episodeMissing') : valid && validType ? t('redditSearch',{query:FilmTools.discussionQuery(currentTitle(),type,context(),'reddit')}) : '';
   const matches = detected.type === type && detected.titles.includes(currentTitle()) &&
     (type !== 'episode' || season === detected.season && episode === detected.episode);
   detailEl.textContent = matches ? [t(type), detected.year,
     type === 'episode' ? t('episodeDetail',{season:season || t('unknown'),episode:episode || t('unknown')}) : '',
     detected.episodeTitle, t(detected.sourceKey)].filter(Boolean).join(' · ') : '';
-  statusEl.textContent = t(statusKey);
+  statusEl.textContent = t(valid && !validType ? 'chooseType' : statusKey);
   languageStatusEl.hidden = !languageSaveFailed;
   languageStatusEl.textContent = languageSaveFailed ? t('languageSaveFailed') : '';
   settingsStatusEl.hidden = !platformSaveFailed && !preferencesLoadFailed;
   settingsStatusEl.textContent = platformSaveFailed ? t('platformSaveFailed') : preferencesLoadFailed ? t('settingsLoadFailed') : '';
 }
+function renderPlatformOrder() {
+  const key = platformOrder.join(',');
+  if (renderedOrder !== key) {
+    for (const id of platformOrder) {
+      document.getElementById('platformOptions').append(document.getElementById(`${id}Option`));
+      document.getElementById('destinations').append(platformButtons[id]);
+    }
+    renderedOrder = key;
+  }
+  platformOrder.forEach((id,index) => {
+    document.getElementById(`${id}Position`).textContent = `${index+1} / ${platformIds.length}`;
+    for (const [direction,disabled] of [['Up',index === 0],['Down',index === platformIds.length-1]]) {
+      const button = document.getElementById(`${id}${direction}`);
+      button.disabled = disabled;
+      const label = t(direction === 'Up' ? 'moveUp' : 'moveDown',{platform:platformNames[id]});
+      button.setAttribute('aria-label',label); button.setAttribute('title',label);
+    }
+  });
+}
 function applyLanguage() {
   languageSelect.value = language;
   AfterWatchI18n.applyLanguage(document,language);
+  suggestionRenderers.forEach(render => render());
   refresh();
 }
 for (const [node,event] of [[titleInput,'input'],[typeSelect,'change'],[scopeSelect,'change'],[seasonInput,'input'],[episodeInput,'input']]) {
@@ -99,10 +145,11 @@ languageSelect.addEventListener('change', () => {
   });
 });
 function savePlatforms() {
-  const chosen = [...enabledPlatforms];
+  if (!preferencesReady) { pendingPlatformSave = true; return; }
+  const chosen = {version:2,enabled:platformOrder.filter(id => enabledPlatforms.includes(id)),order:[...platformOrder]};
   const revision = platformRevision;
   platformSaveFailed = false;
-  saveQueue = saveQueue.then(() => chrome.storage.local.set({enabledPlatforms:chosen})).catch(() => {
+  saveQueue = saveQueue.then(() => chrome.storage.local.set({platformSettings:chosen})).catch(() => {
     if (revision === platformRevision) { platformSaveFailed = true; refresh(); }
   });
 }
@@ -120,37 +167,60 @@ document.addEventListener('keydown',event => {
 for (const [platform,input] of Object.entries(platformInputs)) {
   input.addEventListener('change',() => {
     platformRevision++;
+    platformEdits.set(platform,input.checked);
     enabledPlatforms = enabledPlatforms.filter(value => value !== platform);
     if (input.checked) enabledPlatforms.push(platform);
     savePlatforms();
     refresh();
   });
 }
+for (const id of platformIds) for (const [direction,step] of [['Up',-1],['Down',1]]) {
+  const button = document.getElementById(`${id}${direction}`);
+  button.addEventListener('click',() => {
+    const index = platformOrder.indexOf(id), target = index + step;
+    if (target < 0 || target >= platformOrder.length) return;
+    [platformOrder[index],platformOrder[target]] = [platformOrder[target],platformOrder[index]];
+    orderRevision++; platformRevision++;
+    savePlatforms(); refresh();
+    (button.disabled ? document.getElementById(`${id}${direction === 'Up' ? 'Down' : 'Up'}`) : button).focus();
+  });
+}
 async function loadPreferences() {
   try {
-    const saved = await chrome.storage.local.get(['language','enabledPlatforms']);
+    const saved = await chrome.storage.local.get(['language','enabledPlatforms','platformSettings']);
     if (!languageRevision) language = typeof saved.language === 'string' ? AfterWatchI18n.supportedLanguage(saved.language) : browserLanguage;
-    if (!platformRevision) {
-      if (Array.isArray(saved.enabledPlatforms) && saved.enabledPlatforms.length <= 2 &&
-        saved.enabledPlatforms.every(value => ['eksi','reddit'].includes(value))) {
-        enabledPlatforms = [...new Set(saved.enabledPlatforms)];
-      } else {
-        // Existing installations used Ekşi. Keep their destination even with an English UI.
-        enabledPlatforms = typeof saved.language === 'string' ? ['eksi'] : browserLanguage === 'tr' ? ['eksi'] : ['reddit'];
-        savePlatforms();
-      }
+    const settings = saved.platformSettings;
+    const validIds = (value,complete = false,ids = platformIds) => Array.isArray(value) && value.length <= ids.length &&
+      new Set(value).size === value.length && value.every(id => ids.includes(id)) && (!complete || value.length === ids.length);
+    let restored;
+    if (settings?.version === 2 && validIds(settings.enabled) && validIds(settings.order,true)) restored = settings;
+    else if (settings?.version === 1 && validIds(settings.enabled,false,platformIds.slice(0,3)) && validIds(settings.order,true,platformIds.slice(0,3))) {
+      restored = {enabled:[...settings.enabled],order:[...settings.order,'imdb']};
+      pendingPlatformSave = true;
     }
+    else {
+      const legacy = Array.isArray(saved.enabledPlatforms) && saved.enabledPlatforms.length <= 2 &&
+        saved.enabledPlatforms.every(id => ['eksi','reddit'].includes(id)) ? [...new Set(saved.enabledPlatforms)] :
+        [typeof saved.language === 'string' ? 'eksi' : browserLanguage === 'tr' ? 'eksi' : 'reddit'];
+      const firstRun = !Object.hasOwn(saved,'language') && !Array.isArray(saved.enabledPlatforms) && settings == null;
+      restored = {enabled:[...legacy,'letterboxd',...(firstRun ? ['imdb'] : [])],order:[...platformIds]};
+      pendingPlatformSave = true;
+    }
+    enabledPlatforms = restored.enabled.filter(id => !platformEdits.has(id) || platformEdits.get(id));
+    for (const [id,checked] of platformEdits) if (checked && !enabledPlatforms.includes(id)) enabledPlatforms.push(id);
+    if (!orderRevision) platformOrder = [...restored.order];
     applyLanguage();
   } catch { preferencesLoadFailed = true; }
-  finally { preferencesReady = true; refresh(); }
+  finally { preferencesReady = true; if (pendingPlatformSave) { pendingPlatformSave = false; savePlatforms(); } refresh(); }
 }
 async function openDestination(destination) {
-  if (opening || !FilmTools.isValidTitle(currentTitle()) || destination !== 'letterboxd' &&
-    (!preferencesReady || !enabledPlatforms.includes(destination) || !validDiscussion())) return;
+  if (opening || !preferencesReady || !enabledPlatforms.includes(destination) || !['movie','series','episode'].includes(typeSelect.value) ||
+    !FilmTools.isValidTitle(currentTitle()) || destination !== 'letterboxd' && !validDiscussion()) return;
   opening = true;
   refresh();
   try {
-    const url = FilmTools.destinationUrl(destination,currentTitle(),usesIdentity() ? detected.imdbId : '',typeSelect.value,context());
+    const identity = destination === 'imdb' ? imdbIdentity() : usesIdentity() ? detected.imdbId : '';
+    const url = FilmTools.destinationUrl(destination,currentTitle(),identity,typeSelect.value,context());
     await chrome.tabs.create({url});
   } catch { statusKey = 'openFailed'; }
   finally { opening = false; refresh(); }
@@ -158,6 +228,7 @@ async function openDestination(destination) {
 eksiBtn.addEventListener('click', () => openDestination('eksi'));
 redditBtn.addEventListener('click', () => openDestination('reddit'));
 letterboxdBtn.addEventListener('click', () => openDestination('letterboxd'));
+imdbBtn.addEventListener('click', () => openDestination('imdb'));
 async function run() {
   try {
     const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
@@ -166,19 +237,70 @@ async function run() {
     const results = await chrome.scripting.executeScript({target:{tabId:tab.id},func:FilmTools.collectPageData});
     const data = results?.[0]?.result;
     if (!data) throw new Error('No page data');
+    if (data.youtube?.id && !data.youtube.conflict) {
+      try {
+        const records = await chrome.scripting.executeScript({target:{tabId:tab.id},world:'MAIN',func:FilmTools.collectYouTubePlayerData});
+        const upload = records?.[0]?.result;
+        if (upload && upload.id !== data.youtube.id) data.youtube = {id:'',name:'',conflict:true};
+        else if (upload?.name) {
+          if (data.youtube.name && FilmTools.normalizeText(data.youtube.name) !== FilmTools.normalizeText(upload.name)) data.youtube.conflict = true;
+          else data.youtube.name = upload.name;
+        }
+      } catch { /* An ID-bound DOM title still works when the optional read is unavailable. */ }
+    }
+    if (data.disneyPlayer) {
+      try {
+        const records = await chrome.scripting.executeScript({target:{tabId:tab.id},world:'MAIN',func:FilmTools.collectDisneyPlayerData});
+        const player = records?.[0]?.result;
+        // A navigation during the read must not attach another episode's title to this page.
+        if (player && player.pathname === data.pathname) data.player = player;
+        else if (player) { data.player = null; data.media = []; }
+      } catch { /* DOM/browser metadata and manual entry remain usable. */ }
+    }
     if (edited) { statusKey = 'entered'; return; }
     detected = FilmTools.detectMedia(data);
-    typeSelect.value = detected.type || 'movie';
+    typeSelect.value = detected.type || (detected.title ? '' : 'movie');
     titleInput.value = detected.title;
     seasonInput.value = detected.season;
     episodeInput.value = detected.episode;
-    statusKey = detected.type === 'episode' && !detected.title ? 'missingSeries' : detected.title ? 'check' : 'manual';
+    statusKey = detected.title && !detected.type ? 'chooseType' : detected.type === 'episode' && !detected.title ? 'missingSeries' : detected.title ? 'check' : 'manual';
     for (const title of detected.titles.filter(value => value !== detected.title)) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'alternative';
       button.textContent = title;
       button.addEventListener('click', () => { titleInput.value = title; edited = true; statusKey = 'entered'; refresh(); });
+      alternativeEl.append(button);
+    }
+    const suggestions = detected.suggestions || [];
+    if (suggestions.length) {
+      const label = document.createElement('p');
+      label.className = 'detail'; label.textContent = t('suggestionsLabel');
+      suggestionRenderers.push(() => { label.textContent = t('suggestionsLabel'); });
+      alternativeEl.append(label);
+      const original = document.createElement('button');
+      original.type = 'button'; original.className = 'alternative';
+      const render = () => { original.textContent = `${t('restoreVideoTitle')}: ${detected.title}`; };
+      render(); suggestionRenderers.push(render);
+      original.addEventListener('click', () => {
+        titleInput.value = detected.title; typeSelect.value = ''; seasonInput.value = ''; episodeInput.value = '';
+        edited = true; statusKey = 'chooseType'; refresh();
+      });
+      alternativeEl.append(original);
+    }
+    for (const suggestion of suggestions) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'alternative';
+      const label = () => [suggestion.title, suggestion.year, suggestion.type ? t(suggestion.type) : '',
+        suggestion.type === 'episode' ? t('episodeDetail',{season:suggestion.season || t('unknown'),episode:suggestion.episode || t('unknown')}) : ''].filter(Boolean).join(' · ');
+      button.textContent = label();
+      button.addEventListener('click', () => {
+        titleInput.value = suggestion.title; typeSelect.value = suggestion.type;
+        seasonInput.value = suggestion.season; episodeInput.value = suggestion.episode;
+        edited = true; statusKey = 'check'; refresh();
+      });
+      // Store a local renderer for language changes without putting page strings in HTML or attributes.
+      suggestionRenderers.push(() => { button.textContent = label(); });
       alternativeEl.append(button);
     }
   } catch { statusKey = 'readFailed'; }

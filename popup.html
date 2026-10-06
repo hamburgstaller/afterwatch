@@ -26,28 +26,42 @@
     <section id="settingsPanel" class="settings-panel" aria-labelledby="settingsTitle" hidden tabindex="-1">
       <button id="closeSettings" class="back-button" type="button" data-i18n="back">Back</button>
       <h2 id="settingsTitle" data-i18n="settings">Settings</h2>
-      <p class="settings-intro" data-i18n="platformHelp">Choose which discussion platforms appear. Letterboxd is always available.</p>
-      <article class="platform-option permanent">
-        <strong>Letterboxd</strong><span class="platform-region" data-i18n="global">Global</span>
-        <p data-i18n="letterboxdSetting">Movie reviews and ratings. TV availability is limited.</p>
-        <span class="platform-badge" data-i18n="alwaysAvailable">Always available</span>
+      <p class="settings-intro" data-i18n="platformHelp">Choose your platforms and use the arrows to change their order.</p>
+      <div id="platformOptions">
+      <article id="imdbOption" class="platform-option"><label for="imdbEnabled">
+        <span class="platform-heading"><strong>IMDb</strong><input id="imdbEnabled" type="checkbox" checked aria-describedby="imdbRegion imdbSetting"></span>
+        <span id="imdbRegion" class="platform-region" data-i18n="global">Global</span>
+        <span id="imdbSetting" class="platform-explanation" data-i18n="imdbSetting">Movie, TV series and episode pages, ratings and reviews. Uses a matching IMDb ID when available; otherwise searches by title.</span>
+      </label>
+      <div class="order-controls"><span id="imdbPosition" class="order-position"></span><button id="imdbUp" class="order-button" type="button" aria-label="Move IMDb up">↑</button><button id="imdbDown" class="order-button" type="button" aria-label="Move IMDb down">↓</button></div></article>
+      <article id="letterboxdOption" class="platform-option">
+        <label for="letterboxdEnabled">
+          <span class="platform-heading"><strong>Letterboxd</strong><input id="letterboxdEnabled" type="checkbox" checked aria-describedby="letterboxdRegion letterboxdSetting"></span>
+          <span id="letterboxdRegion" class="platform-region" data-i18n="global">Global</span>
+          <span id="letterboxdSetting" class="platform-explanation" data-i18n="letterboxdSetting">Movie reviews and ratings. TV availability is limited.</span>
+        </label>
+        <div class="order-controls"><span id="letterboxdPosition" class="order-position"></span><button id="letterboxdUp" class="order-button" type="button" aria-label="Move Letterboxd up">↑</button><button id="letterboxdDown" class="order-button" type="button" aria-label="Move Letterboxd down">↓</button></div>
       </article>
-      <label class="platform-option" for="redditEnabled">
+      <article id="redditOption" class="platform-option"><label for="redditEnabled">
         <span class="platform-heading"><strong>Reddit</strong><input id="redditEnabled" type="checkbox" aria-describedby="redditRegion redditSetting"></span>
         <span id="redditRegion" class="platform-region" data-i18n="redditRegion">Global · predominantly English</span>
         <span id="redditSetting" class="platform-explanation" data-i18n="redditSetting">Search film and TV discussions. Result language and matching episode threads are not guaranteed.</span>
       </label>
-      <label class="platform-option" for="eksiEnabled">
+      <div class="order-controls"><span id="redditPosition" class="order-position"></span><button id="redditUp" class="order-button" type="button" aria-label="Move Reddit up">↑</button><button id="redditDown" class="order-button" type="button" aria-label="Move Reddit down">↓</button></div></article>
+      <article id="eksiOption" class="platform-option"><label for="eksiEnabled">
         <span class="platform-heading"><strong>Ekşi Sözlük</strong><input id="eksiEnabled" type="checkbox" aria-describedby="eksiRegion eksiSetting"></span>
         <span id="eksiRegion" class="platform-region" data-i18n="eksiRegion">Türkiye · Turkish</span>
         <span id="eksiSetting" class="platform-explanation" data-i18n="eksiSetting">Search Turkish film and TV discussions. A series often shares one topic across episodes.</span>
       </label>
+      <div class="order-controls"><span id="eksiPosition" class="order-position"></span><button id="eksiUp" class="order-button" type="button" aria-label="Move Ekşi Sözlük up">↑</button><button id="eksiDown" class="order-button" type="button" aria-label="Move Ekşi Sözlük down">↓</button></div></article>
+      </div>
       <p id="settingsStatus" class="detail" role="status" hidden></p>
     </section>
     <div id="watchPanel">
     <section class="film-card" aria-label="Media selection" data-i18n-aria="selection" tabindex="0">
       <label for="mediaType" data-i18n="typeLabel">Content type</label>
       <select id="mediaType">
+        <option value="" data-i18n="chooseType">Choose the content type</option>
         <option value="movie" data-i18n="movie">Movie</option>
         <option value="series" data-i18n="series">TV series</option>
         <option value="episode" data-i18n="episode">TV episode</option>
@@ -59,7 +73,7 @@
           <div><label for="seasonNumber" data-i18n="seasonLabel">Season</label><input id="seasonNumber" type="number" min="0" max="999" step="1" inputmode="numeric" aria-describedby="eksiRoute"></div>
           <div><label for="episodeNumber" data-i18n="episodeLabel">Episode</label><input id="episodeNumber" type="number" min="1" max="9999" step="1" inputmode="numeric" aria-describedby="eksiRoute"></div>
         </div>
-        <label for="discussionScope" data-i18n="scopeLabel">Discussion scope</label>
+        <label for="discussionScope" data-i18n="scopeLabel">Search scope</label>
         <select id="discussionScope">
           <option value="series" data-i18n="scopeSeries">Entire series</option>
           <option value="episode" data-i18n="scopeEpisode">This episode</option>
@@ -70,7 +84,8 @@
       <p id="status" role="status" aria-live="polite">Reading movie or TV information…</p>
       <p id="spoilerNote" class="detail" data-i18n="spoiler" hidden></p>
     </section>
-    <div class="destinations">
+    <p id="noPlatforms" class="detail" data-i18n="noPlatforms" role="status" hidden>All platforms are hidden. Enable a platform in Settings.</p>
+    <div id="destinations" class="destinations">
       <button id="eksiBtn" class="destination eksi" type="button" disabled>
         <span class="destination-name">Ekşi Sözlük <span aria-hidden="true">↗</span></span>
         <span class="destination-description" data-i18n="eksiDescription">Explore discussions in Turkish</span>
@@ -85,6 +100,11 @@
         <span class="destination-name">Letterboxd <span aria-hidden="true">↗</span></span>
         <span class="destination-description" data-i18n="letterboxdDescription">Read reviews and rate on Letterboxd</span>
         <span id="letterboxdRoute" class="route">Search by movie title</span>
+      </button>
+      <button id="imdbBtn" class="destination imdb" type="button" disabled>
+        <span class="destination-name">IMDb <span aria-hidden="true">↗</span></span>
+        <span class="destination-description" data-i18n="imdbDescription">Explore movie, TV series and episode ratings</span>
+        <span id="imdbRoute" class="route"></span>
       </button>
     </div>
     </div>

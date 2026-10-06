@@ -1,0 +1,10 @@
+[
+  {"name":"Movie suggestion","title":"Raw (2016) — Full Movie","suggestion":{"title":"Raw","type":"movie","season":"","episode":"","year":"2016"}},
+  {"name":"Episode suggestion","title":"Example Show 2. Sezon 3. Bölüm","suggestion":{"title":"Example Show","type":"episode","season":"2","episode":"3","year":""}},
+  {"name":"Colon episode marker","title":"Example Show S02:E03","suggestion":{"title":"Example Show","type":"episode","season":"2","episode":"3","year":""}},
+  {"name":"Observed partial episode","title":"Gönül Dağı 1. bölüm","suggestion":{"title":"Gönül Dağı","type":"episode","season":"","episode":"1","year":""}},
+  {"name":"Generic video","title":"Top 10 movies","suggestion":null},
+  {"name":"Meaningful numbered title","title":"Blade Runner 2049 — Full Movie 1080p","suggestion":{"title":"Blade Runner 2049","type":"movie","season":"","episode":"","year":""}},
+  {"name":"Unrecognized suffix","title":"Example Show S02E03 | Fan Edit","suggestion":null},
+  {"name":"Page text remains inert","title":"<img src=x onerror=alert(1)> — Full Movie","suggestion":{"title":"<img src=x onerror=alert(1)>","type":"movie","season":"","episode":"","year":""}}
+]

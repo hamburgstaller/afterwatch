@@ -1,4 +1,20 @@
-# Release review — AfterWatch 1.2.0
+# Release review — AfterWatch 1.3.0
+
+Reviewed and approved for publication by the project owner on October 6, 2026. Manifest and package both identify version 1.3.0. This release combines playback and YouTube detection, nested episode fallback, platform ordering and IMDb support.
+
+MUBI numeric-player/legacy-record detection, scoped streaming-player title fallbacks, explicit unknown-type selection, and the observed Prime/Disney/Apple public-detail fixes are implemented. YouTube adds an upload-ID-bound reader, user-selected title/episode suggestions, and raw-title restoration. This release also adds platform ordering, optional Letterboxd and IMDb movie/TV/episode navigation. Series and episode identities are separate; edits or ambiguous metadata cannot reuse an old episode ID. IMDb falls back to title search without guessing catalog matches. 168 Node tests and syntax/assets checks pass. Streaming/YouTube browser checks are recorded below. Permissions and CSP are unchanged; Disney and YouTube have separate one-time bounded MAIN-world metadata readers. No new permissions or runtime dependencies are required.
+
+The four-platform review passed 200 native Chrome preview scenarios: all 24 orders with every platform enabled, plus all 16 enabled subsets with the default order, across five languages. Destination/settings DOM order, endpoint buttons, checkbox state, no horizontal overflow, and popup height at most 600px were checked. Separate IMDb checks in each language verify parent-series versus exact-episode routes, changed-number fallback, missing-number blocking, moved-platform focus, visibility/order persistence after reload, and localized copy. English Settings and Turkish IMDb destination screenshots were visually inspected. Node tests also cover legacy/version 1 migration, explicit all-disabled settings, malformed schemas, slow restoration, serialized writes, and disabled event-handler guards. These checks use simulated Chrome APIs; unpacked loading remains a separate manual check. The earlier three-platform review passed 240 combinations before IMDb was added.
+
+A subsequent nested-episode regression verifies a malformed JSON-LD page with no Open Graph: the primary heading and typed nested route agree on the series, season and episode. Native Chrome extraction and five localized popup scenarios pass, including all four destination queries, zero application errors and popup bounds. Node cases reject conflicting names/numbers, multiple headings, article/movie signals, malformed paths and incomplete labels. Turkish dotted-I watch suffixes are handled explicitly. No episode name, release year or identity is inferred from invalid metadata.
+
+Authenticated players could not be inspected in the available signed-out browser. MUBI redirected to a public film page; Netflix, Prime, Disney, and Apple public details were inspected. Synthetic player checks are not live account verification or unpacked-extension loading. Exact sources, limitations, and the remaining manual checks are documented in [STREAMING.md](STREAMING.md).
+
+The prior 22 browser regression scenarios and 60 language/platform scenarios also passed again, with zero application errors and normal popup height no greater than 594px.
+
+---
+
+# Archived release review — AfterWatch 1.2.0
 
 Reviewed and approved for publication by the project owner on October 5, 2026. This feature release follows 1.1.0; the local 1.1.1 episode fix is included rather than published separately.
 
