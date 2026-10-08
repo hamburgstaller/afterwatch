@@ -193,6 +193,104 @@ const youtubeMessages = {
 };
 for (const [language,catalog] of Object.entries(youtubeMessages)) Object.assign(messages[language],catalog);
 for (const [language,catalog] of Object.entries(playerMessages)) Object.assign(messages[language],catalog);
+const detectionMessages = {
+  en:{
+    detectIdentityConflict:'IMDb IDs disagree. No conflicting ID will be used; check the title before searching.',
+    detectAmbiguous:'More than one possible movie or series was found. Enter the intended title and choose its type.',
+    detectEpisodeConflict:'Series or episode details disagree. Check the series title, season and episode before searching.',
+    detectVideoConflict:'Video title sources disagree. Enter the correct title and choose its type.',
+    detectVideoMissing:'No title tied to the current video was found. Enter a title and choose its type.',
+    detectPlayerConflict:'Player information conflicts with this page. Enter the current title and choose its type.',
+    detectPlayerMissing:'No readable title was found in the player. Enter the title and choose its type.',
+    detectMetadataUnavailable:'Some page information could not be read, and no title was identified. Enter a title and choose its type.',
+    detectNoMedia:'No identifiable movie or TV content was found. Enter a title and choose its type.',
+    detectNavigationChanged:'The content changed while it was being read. Reopen AfterWatch or enter the current title.',
+    detectTitleMissing:'The title is missing. Enter the movie or series title.',
+    detectTitleInvalid:'Use a title of 1–180 characters, other than a single or double dot.',
+    detectTypeMissing:'A title was found, but its content type is unknown. Choose Movie, TV series or TV episode.',
+    detectNumbersInvalid:'Use whole numbers: season 0–999 and episode 1–9999. Season 0 is for specials.',
+    detectNumbersMissing:'Season and episode numbers are missing. Fill them for episode search; series search is available.',
+    detectSeasonMissing:'The season number is missing. Fill it for episode search; series search is available.',
+    detectEpisodeMissing:'The episode number is missing. Fill it for episode search; series search is available.'
+  },
+  es:{
+    detectIdentityConflict:'Los ID de IMDb no coinciden. No se usará un ID contradictorio; comprueba el título antes de buscar.',
+    detectAmbiguous:'Se encontraron varias películas o series posibles. Introduce el título correcto y elige su tipo.',
+    detectEpisodeConflict:'Los datos de la serie o del episodio no coinciden. Comprueba título, temporada y episodio antes de buscar.',
+    detectVideoConflict:'Las fuentes del título del vídeo no coinciden. Introduce el título correcto y elige su tipo.',
+    detectVideoMissing:'No se encontró un título vinculado al vídeo actual. Introduce un título y elige su tipo.',
+    detectPlayerConflict:'La información del reproductor no coincide con esta página. Introduce el título actual y elige su tipo.',
+    detectPlayerMissing:'No se encontró un título legible en el reproductor. Introduce el título y elige su tipo.',
+    detectMetadataUnavailable:'Parte de la información no se pudo leer y no se identificó un título. Introduce un título y elige su tipo.',
+    detectNoMedia:'No se identificó una película ni contenido de TV. Introduce un título y elige su tipo.',
+    detectNavigationChanged:'El contenido cambió durante la lectura. Abre AfterWatch de nuevo o introduce el título actual.',
+    detectTitleMissing:'Falta el título. Introduce el título de la película o serie.',
+    detectTitleInvalid:'Usa un título de 1–180 caracteres, distinto de uno o dos puntos.',
+    detectTypeMissing:'Se encontró un título, pero se desconoce su tipo. Elige película, serie o episodio.',
+    detectNumbersInvalid:'Usa números enteros: temporada 0–999 y episodio 1–9999. La temporada 0 corresponde a especiales.',
+    detectNumbersMissing:'Faltan temporada y episodio. Complétalos para buscar el episodio; puedes buscar la serie.',
+    detectSeasonMissing:'Falta el número de temporada. Complétalo para buscar el episodio; puedes buscar la serie.',
+    detectEpisodeMissing:'Falta el número de episodio. Complétalo para buscar el episodio; puedes buscar la serie.'
+  },
+  pt:{
+    detectIdentityConflict:'Os IDs do IMDb não coincidem. Nenhum ID conflitante será usado; confira o título antes de pesquisar.',
+    detectAmbiguous:'Foi encontrado mais de um possível filme ou série. Informe o título correto e escolha o tipo.',
+    detectEpisodeConflict:'Os dados da série ou do episódio não coincidem. Confira título, temporada e episódio antes de pesquisar.',
+    detectVideoConflict:'As fontes do título do vídeo não coincidem. Informe o título correto e escolha o tipo.',
+    detectVideoMissing:'Nenhum título vinculado ao vídeo atual foi encontrado. Informe um título e escolha o tipo.',
+    detectPlayerConflict:'As informações do player não coincidem com a página. Informe o título atual e escolha o tipo.',
+    detectPlayerMissing:'Nenhum título legível foi encontrado no player. Informe o título e escolha o tipo.',
+    detectMetadataUnavailable:'Parte das informações não pôde ser lida e nenhum título foi identificado. Informe um título e escolha o tipo.',
+    detectNoMedia:'Nenhum filme ou conteúdo de TV foi identificado. Informe um título e escolha o tipo.',
+    detectNavigationChanged:'O conteúdo mudou durante a leitura. Abra o AfterWatch novamente ou informe o título atual.',
+    detectTitleMissing:'O título está ausente. Informe o título do filme ou da série.',
+    detectTitleInvalid:'Use um título de 1–180 caracteres, diferente de um ou dois pontos.',
+    detectTypeMissing:'Um título foi encontrado, mas o tipo é desconhecido. Escolha filme, série ou episódio.',
+    detectNumbersInvalid:'Use números inteiros: temporada 0–999 e episódio 1–9999. A temporada 0 é para especiais.',
+    detectNumbersMissing:'Temporada e episódio estão ausentes. Preencha para pesquisar o episódio; a busca da série está disponível.',
+    detectSeasonMissing:'O número da temporada está ausente. Preencha para pesquisar o episódio; a busca da série está disponível.',
+    detectEpisodeMissing:'O número do episódio está ausente. Preencha para pesquisar o episódio; a busca da série está disponível.'
+  },
+  it:{
+    detectIdentityConflict:'Gli ID IMDb non coincidono. Nessun ID in conflitto verrà usato; controlla il titolo prima di cercare.',
+    detectAmbiguous:'Sono stati trovati più film o serie possibili. Inserisci il titolo corretto e scegli il tipo.',
+    detectEpisodeConflict:'I dati della serie o dell’episodio non coincidono. Controlla titolo, stagione ed episodio prima di cercare.',
+    detectVideoConflict:'Le fonti del titolo del video non coincidono. Inserisci il titolo corretto e scegli il tipo.',
+    detectVideoMissing:'Nessun titolo associato al video attuale. Inserisci un titolo e scegli il tipo.',
+    detectPlayerConflict:'Le informazioni del player non coincidono con la pagina. Inserisci il titolo attuale e scegli il tipo.',
+    detectPlayerMissing:'Nessun titolo leggibile trovato nel player. Inserisci il titolo e scegli il tipo.',
+    detectMetadataUnavailable:'Parte delle informazioni non è leggibile e nessun titolo è stato identificato. Inserisci un titolo e scegli il tipo.',
+    detectNoMedia:'Nessun film o contenuto TV identificabile. Inserisci un titolo e scegli il tipo.',
+    detectNavigationChanged:'Il contenuto è cambiato durante la lettura. Riapri AfterWatch o inserisci il titolo attuale.',
+    detectTitleMissing:'Manca il titolo. Inserisci il titolo del film o della serie.',
+    detectTitleInvalid:'Usa un titolo di 1–180 caratteri, diverso da uno o due punti.',
+    detectTypeMissing:'Titolo trovato, ma il tipo è sconosciuto. Scegli film, serie TV o episodio.',
+    detectNumbersInvalid:'Usa numeri interi: stagione 0–999 ed episodio 1–9999. La stagione 0 indica gli speciali.',
+    detectNumbersMissing:'Mancano stagione ed episodio. Compilali per cercare l’episodio; puoi cercare la serie.',
+    detectSeasonMissing:'Manca il numero della stagione. Compilalo per cercare l’episodio; puoi cercare la serie.',
+    detectEpisodeMissing:'Manca il numero dell’episodio. Compilalo per cercare l’episodio; puoi cercare la serie.'
+  },
+  tr:{
+    detectIdentityConflict:'IMDb kimlikleri uyuşmuyor. Çelişen kimlik kullanılmayacak; aramadan önce başlığı kontrol et.',
+    detectAmbiguous:'Birden fazla olası film veya dizi bulundu. İstediğin başlığı gir ve türünü seç.',
+    detectEpisodeConflict:'Dizi veya bölüm bilgileri birbiriyle uyuşmuyor. Aramadan önce dizi adını, sezonu ve bölümü kontrol et.',
+    detectVideoConflict:'Video başlığı kaynakları birbiriyle uyuşmuyor. Doğru başlığı gir ve türünü seç.',
+    detectVideoMissing:'Güncel videoya bağlı bir başlık bulunamadı. Bir başlık gir ve türünü seç.',
+    detectPlayerConflict:'Oynatıcı bilgisi bu sayfayla uyuşmuyor. Güncel başlığı gir ve türünü seç.',
+    detectPlayerMissing:'Oynatıcıda okunabilir başlık bulunamadı. Başlığı gir ve türünü seç.',
+    detectMetadataUnavailable:'Sayfadaki bazı bilgiler okunamadı ve başlık tespit edilemedi. Başlığı gir ve türünü seç.',
+    detectNoMedia:'Tanımlanabilir bir film veya dizi içeriği bulunamadı. Bir başlık gir ve türünü seç.',
+    detectNavigationChanged:'Okuma sırasında içerik değişti. AfterWatch’u yeniden aç veya güncel başlığı gir.',
+    detectTitleMissing:'Başlık eksik. Film veya dizi adını gir.',
+    detectTitleInvalid:'1–180 karakterlik bir başlık kullan; yalnızca bir veya iki nokta olmasın.',
+    detectTypeMissing:'Başlık bulundu ancak içerik türü belirsiz. Film, dizi veya dizi bölümü seç.',
+    detectNumbersInvalid:'Tam sayı kullan: sezon 0–999, bölüm 1–9999. Sezon 0 özel bölümler içindir.',
+    detectNumbersMissing:'Sezon ve bölüm numaraları eksik. Bölüm araması için gir; dizi araması kullanılabilir.',
+    detectSeasonMissing:'Sezon numarası eksik. Bölüm araması için gir; dizi araması kullanılabilir.',
+    detectEpisodeMissing:'Bölüm numarası eksik. Bölüm araması için gir; dizi araması kullanılabilir.'
+  }
+};
+for (const [language,catalog] of Object.entries(detectionMessages)) Object.assign(messages[language],catalog);
 for (const catalog of Object.values(messages)) Object.freeze(catalog);
 Object.freeze(messages);
 function supportedLanguage(language) { return Object.hasOwn(messages, language) ? language : 'en'; }

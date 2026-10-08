@@ -70,8 +70,8 @@
       <input id="filmTitle" type="text" maxlength="180" placeholder="e.g. Raw or a series title" data-i18n-placeholder="placeholder" autocomplete="off" spellcheck="false" aria-describedby="status filmDetail">
       <div id="episodeControls" hidden>
         <div class="episode-numbers">
-          <div><label for="seasonNumber" data-i18n="seasonLabel">Season</label><input id="seasonNumber" type="number" min="0" max="999" step="1" inputmode="numeric" aria-describedby="eksiRoute"></div>
-          <div><label for="episodeNumber" data-i18n="episodeLabel">Episode</label><input id="episodeNumber" type="number" min="1" max="9999" step="1" inputmode="numeric" aria-describedby="eksiRoute"></div>
+          <div><label for="seasonNumber" data-i18n="seasonLabel">Season</label><input id="seasonNumber" type="number" min="0" max="999" step="1" inputmode="numeric" aria-describedby="status eksiRoute"></div>
+          <div><label for="episodeNumber" data-i18n="episodeLabel">Episode</label><input id="episodeNumber" type="number" min="1" max="9999" step="1" inputmode="numeric" aria-describedby="status eksiRoute"></div>
         </div>
         <label for="discussionScope" data-i18n="scopeLabel">Search scope</label>
         <select id="discussionScope">
@@ -81,9 +81,9 @@
       </div>
       <p id="filmDetail" class="detail"></p>
       <div id="alternatives" aria-label="Other titles found on this page" data-i18n-aria="otherTitles"></div>
-      <p id="status" role="status" aria-live="polite">Reading movie or TV information…</p>
       <p id="spoilerNote" class="detail" data-i18n="spoiler" hidden></p>
     </section>
+    <p id="status" role="status" aria-live="polite" aria-atomic="true">Reading movie or TV information…</p>
     <p id="noPlatforms" class="detail" data-i18n="noPlatforms" role="status" hidden>All platforms are hidden. Enable a platform in Settings.</p>
     <div id="destinations" class="destinations">
       <button id="eksiBtn" class="destination eksi" type="button" disabled>

@@ -7,6 +7,11 @@ const manifest = JSON.parse(read('manifest.json'));
 const pkg = JSON.parse(read('package.json'));
 if (manifest.version !== pkg.version) throw new Error('Version mismatch');
 if (manifest.description.length > 132) throw new Error('Manifest description is too long');
+for (const [size,file] of Object.entries({...manifest.icons,...manifest.action.default_icon})) {
+  const bytes = fs.readFileSync(path.join(root,file));
+  const signature = Buffer.from([137,80,78,71,13,10,26,10]);
+  if (bytes.length < 33 || !bytes.subarray(0,8).equals(signature) || bytes.readUInt32BE(16) !== Number(size) || bytes.readUInt32BE(20) !== Number(size)) throw new Error(`Invalid icon export: ${file}`);
+}
 if (pkg.license !== 'MIT' || !read('LICENSE').startsWith('MIT License')) throw new Error('License mismatch');
 const html = read('popup.html');
 if (!html.includes('lang="en"') || !html.includes(`<title>${manifest.name}</title>`)) throw new Error('Popup identity mismatch');

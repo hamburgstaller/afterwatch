@@ -2,6 +2,8 @@
 
 AfterWatch stores only your interface language and platform visibility/order preferences locally. It does not store watch history, send telemetry, create accounts, or operate a backend. Initial suggestions use the browser UI language; no IP geolocation, country detection, or external language service is used.
 
+Detection outcomes use fixed reason codes in popup memory. The extension does not retain raw parsing errors, store diagnostic history, or send outcomes to any service. Missing/conflicting information is explained without an external catalog check or a guessed confidence score.
+
 Opening the popup reads the active page's movie, series, and episode titles and metadata, including series/season relationships and IMDb URLs in that metadata. Episode detection also examines the current URL's pathname, excluding query parameters and fragments. The pathname is not included in destination searches or stored. The information is processed in popup memory. It does not read browser history, cookies, form values, passwords, page comments, or video content. JSON-LD references are resolved only within the page, with no external lookup.
 
 On a matching MUBI film page, the extension also parses a size-limited embedded film record to read its localized title, supplied original title, slug, and release year. Player detection checks the film ID against the numeric player pathname, including the legacy record location. It reads only the current film, not recommendation records, and does not request another language version or send that record elsewhere.

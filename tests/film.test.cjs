@@ -273,6 +273,32 @@ test('Episode heading regression fills the series name and both numbers with onl
 });
 
 const nestedEpisode = require('./fixtures/nested-episode.json');
+
+test('Detection reasons distinguish ambiguity, unavailable metadata and missing player/video titles', () => {
+  const malformed=collectWith(['{"broken":"first\nsecond"}'],{heading:'News'});
+  assert.equal(malformed.invalidMetadata,true); assert.equal(f.detectMedia(malformed).issue,'detectMetadataUnavailable');
+  const valid=collectWith(['{"broken":"first\nsecond"}',JSON.stringify({'@type':'Movie',name:'Raw'})]);
+  assert.equal(f.detectMedia(valid).title,'Raw'); assert.equal(f.detectMedia(valid).issue,'');
+  assert.equal(f.detectMedia({media:[{type:'movie',name:'A'},{type:'movie',name:'B'}]}).issue,'detectAmbiguous');
+  assert.equal(f.detectMedia({playerPage:true,player:null}).issue,'detectPlayerMissing');
+  assert.equal(f.detectMedia({playerPage:true,playerConflict:true}).issue,'detectPlayerConflict');
+  assert.equal(f.detectMedia({playerPage:true,identityMismatch:true}).issue,'detectPlayerConflict');
+  assert.equal(f.detectMedia({youtube:{id:'AbCdEfG1234',name:'',conflict:false}}).issue,'detectVideoMissing');
+  assert.equal(f.detectMedia({youtube:{id:'AbCdEfG1234',name:'A',conflict:true}}).issue,'detectVideoConflict');
+});
+
+test('Diagnostic reasons do not weaken conservative title, episode or identity handling', () => {
+  const conflict=f.detectMedia({...nestedEpisode,pathname:'/dizi/breaking-bad-izle-6/sezon-2/bolum-1-hd15/'});
+  assert.equal(conflict.title,''); assert.equal(conflict.issue,'detectEpisodeConflict');
+  const incomplete=f.detectMedia({heading:'Other Show S01E02',media:[{type:'episode',name:'Pilot',series:{name:'Example Show'}}]});
+  assert.equal(incomplete.title,'Example Show'); assert.equal(incomplete.season,''); assert.equal(incomplete.issue,'detectEpisodeConflict');
+  const ids=f.detectMedia({media:[{type:'movie',name:'Raw',sameAs:['https://imdb.com/title/tt4954522/','https://imdb.com/title/tt1234567/']}]});
+  assert.equal(ids.title,'Raw'); assert.equal(ids.imdbId,''); assert.equal(ids.issue,'detectIdentityConflict');
+  const nav=f.detectMedia({navigationChanged:true,media:[{type:'movie',name:'Old Movie'}]});
+  assert.equal(nav.title,''); assert.equal(nav.issue,'detectNavigationChanged');
+  const hostile=f.detectMedia({issue:'<img src=x onerror=alert(1)>',heading:'News'});
+  assert.equal(hostile.issue,'detectNoMedia');
+});
 test('A nested episode route and matching primary heading identify an episode without valid JSON-LD or Open Graph', () => {
   const malformed = '{"@type":"TVEpisode","name":"Breaking Bad 1. Sezon 1. Bölüm izle","description":"line one\nline two"}';
   const page=collectWith([malformed],{heading:nestedEpisode.heading,pageTitle:nestedEpisode.pageTitle,url:'https://example.test'+nestedEpisode.pathname});

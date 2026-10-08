@@ -28,8 +28,16 @@ window.chrome = {
     if (request.world === 'MAIN') return [{result:null}];
     if (scenario === 'error') throw new Error('Simulated injection failure');
     if (scenario === 'generic') return [{result:{heading:'News',movies:[]}}];
+    if (scenario === 'ambiguous') return [{result:{media:[{type:'movie',name:'Example A'},{type:'movie',name:'Example B'}]}}];
+    if (scenario === 'player-missing') return [{result:{playerPage:true,player:null}}];
+    if (scenario === 'player-conflict') return [{result:{playerPage:true,playerConflict:true}}];
+    if (scenario === 'metadata-unreadable') return [{result:{invalidMetadata:true,media:[]}}];
+    if (scenario === 'episode-conflict') return [{result:{heading:'Other Show S01E02',media:[{type:'episode',name:'Pilot',series:{name:'Example Show'}}]}}];
+    if (scenario === 'missing-numbers') return [{result:{media:[{type:'episode',name:'Pilot',series:{name:'Example Show'}}]}}];
+    if (scenario === 'identity-conflict') return [{result:{media:[{type:'movie',name:'Raw',sameAs:['https://imdb.com/title/tt4954522/','https://imdb.com/title/tt1234567/']}]}}];
     if (scenario === 'numeric') return [{result:{movies:[{name:'Blade Runner 2049',date:'2017-01-01'}]}}];
     if (scenario === 'hostile') return [{result:{movies:[{name:'<img src=x onerror=alert(1)>'}]}}];
+    if (scenario === 'title-swap') return [{result:{media:[{type:'movie',name:'Müstakbel Suçlar',alternateNames:['Crimes of the Future'],sameAs:['https://www.imdb.com/title/tt14549466/']}]}}];
     if (scenario === 'imdb-series') return [{result:{media:[{type:'series',name:'Breaking Bad',sameAs:['https://www.imdb.com/title/tt0903747/']}]}}];
     if (scenario === 'imdb-episode') return [{result:{media:[{type:'episode',name:'Pilot',season:'1',episode:'1',sameAs:['https://www.imdb.com/title/tt0959621/'],series:{name:'Breaking Bad',sameAs:['https://www.imdb.com/title/tt0903747/']}}]}}];
     if (scenario === 'series') return [{result:{media:[{type:'series',name:'Example Series 2049',date:'2020-01-01'}]}}];

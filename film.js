@@ -12,9 +12,10 @@ function collectPageData() {
   const headingCopy = heading?.cloneNode(true);
   if (small) headingCopy?.querySelectorAll('small').forEach(node => node.remove());
   const documents = [];
+  let invalidMetadata = false;
   for (const script of Array.from(document.querySelectorAll('script[type="application/ld+json"]')).slice(0, 20)) {
     if (script.textContent.length > 100000) continue;
-    try { documents.push(JSON.parse(script.textContent)); } catch { /* Other signals still work. */ }
+    try { documents.push(JSON.parse(script.textContent)); } catch { invalidMetadata = true; }
   }
   const names = value => (Array.isArray(value) ? value : [value])
     .filter(item => typeof item === 'string').slice(0, 6).map(text);
@@ -245,7 +246,8 @@ function collectPageData() {
   return { heading: text(headingCopy?.textContent), headingCount:Math.max(heading ? 1 : 0,document.querySelectorAll('h1').length),
     alternateHeading: text(small?.textContent), pageTitle: text(document.title),
     ogTitle: meta('meta[property="og:title"]'), ogType: meta('meta[property="og:type"]'),
-    pathname: text(location.pathname), media, playerPage, player, disneyPlayer:disney, untypedTitle, youtube };
+    pathname: text(location.pathname), media, playerPage, player, disneyPlayer:disney, untypedTitle, youtube,
+    invalidMetadata, playerConflict, identityMismatch:mubiMismatch };
 }
 
 // One bounded MAIN-world read of the current upload's title. No streaming, account or comment data.
@@ -387,7 +389,7 @@ function episodePath(value) {
   return null;
 }
 
-function episodeFromPage(data, metadataTitles, season, episode) {
+function episodeFromPage(data, metadataTitles, season, episode, onConflict = () => {}) {
   const patterns = [data.heading, data.ogTitle, data.pageTitle].map(episodePattern).filter(Boolean);
   const pathPattern = episodePath(data.pathname);
   const samePathTitle = title => {
@@ -400,26 +402,30 @@ function episodeFromPage(data, metadataTitles, season, episode) {
   if (!candidate) return null;
   const matches = item => titleSlug(item.title) === titleSlug(candidate.title) &&
     item.season === candidate.season && item.episode === candidate.episode;
-  if (!patterns.every(matches) || pathPattern && (!samePathTitle(candidate.title) || pathPattern.season !== candidate.season || pathPattern.episode !== candidate.episode)) return null;
-  if (metadataTitles.length && !metadataTitles.some(title => titleSlug(title) === titleSlug(candidate.title))) return null;
-  if (season !== '' && season !== candidate.season || episode !== '' && episode !== candidate.episode) return null;
+  if (!patterns.every(matches) || pathPattern && (!samePathTitle(candidate.title) || pathPattern.season !== candidate.season || pathPattern.episode !== candidate.episode)) { onConflict(); return null; }
+  if (metadataTitles.length && !metadataTitles.some(title => titleSlug(title) === titleSlug(candidate.title))) { onConflict(); return null; }
+  if (season !== '' && season !== candidate.season || episode !== '' && episode !== candidate.episode) { onConflict(); return null; }
   return candidate;
 }
 
 function detectMedia(data) {
-  const empty = { type:'', title:'', titles:[], imdbId:'', seriesImdbId:'', episodeImdbId:'', year:'', source:'', sourceKey:'', season:'', episode:'', episodeTitle:'' };
+  const empty = { type:'', title:'', titles:[], imdbId:'', seriesImdbId:'', episodeImdbId:'', year:'', source:'', sourceKey:'', season:'', episode:'', episodeTitle:'', issue:'' };
+  const fail = issue => ({...empty,issue});
   if (!data || typeof data !== 'object') return empty;
+  if (data.navigationChanged) return fail('detectNavigationChanged');
   if (data.youtube) {
     const title = normalizeText(data.youtube.name);
-    if (!/^[\w-]{11}$/.test(data.youtube.id || '') || data.youtube.conflict || !isValidTitle(title)) return empty;
+    if (data.youtube.conflict) return fail('detectVideoConflict');
+    if (!/^[\w-]{11}$/.test(data.youtube.id || '') || !isValidTitle(title)) return fail('detectVideoMissing');
     return {...empty,title,titles:[title],sourceKey:'sourceYouTube',source:'YouTube video title',suggestions:youTubeSuggestions(title)};
   }
   if (data.playerPage) {
+    if (data.playerConflict || data.identityMismatch) return fail('detectPlayerConflict');
     const player = data.player;
     const bound = Array.isArray(data.media) && data.media.length === 1 ? detectMedia({media:data.media}) : empty;
-    if (!player) return bound;
+    if (!player) return bound.type ? bound : {...bound,issue:bound.issue || 'detectPlayerMissing'};
     const title = normalizeText(player.name);
-    if (!isValidTitle(title)) return empty;
+    if (!isValidTitle(title)) return fail('detectPlayerMissing');
     // A current player title takes precedence over stale detail metadata. Never transfer a conflicting ID.
     const subtitle = normalizeText(player.subtitle);
     const match = subtitle.match(/^(?:S(\d{1,4})\s*[:,·]?\s*E(\d{1,4})|(?:Season|Temporada|Stagione)\s*(\d{1,4})\s*[,·:-]?\s*(?:Episode|Episodio|Episódio|Capítulo)\s*(\d{1,4})|(\d{1,4})\.?\s*Sezon\s*[,·:-]?\s*(\d{1,4})\.?\s*B[öo]l[üu]m)(?:(?:\s*[-–—:·,]\s*|\s+)(.*))?$/iu);
@@ -448,27 +454,30 @@ function detectMedia(data) {
   const primary = items.filter(item => item.primary);
   let selected;
   if (primary.length === 1) selected = primary[0];
-  else if (primary.length > 1) return empty;
+  else if (primary.length > 1) return fail('detectAmbiguous');
   else if (items.length === 1) selected = items[0];
   else if (items.length > 1) {
     const episodes = items.filter(item => item.type === 'episode');
-    if (episodes.length !== 1) return empty;
+    if (episodes.length !== 1) return fail('detectAmbiguous');
     const episode = episodes[0];
     const parent = episode.series;
     if (!parent || !items.every(item => item === episode || (item.type === 'series' &&
-      (parent.id && parent.id === item.id || !parent.id && cleanTitle(parent.name) && cleanTitle(parent.name) === cleanTitle(item.name))))) return empty;
+      (parent.id && parent.id === item.id || !parent.id && cleanTitle(parent.name) && cleanTitle(parent.name) === cleanTitle(item.name))))) return fail('detectAmbiguous');
     selected = episode;
   }
   const ogType = {'video.movie':'movie','video.tv_show':'series','video.episode':'episode'}[data.ogType];
+  let episodeConflict = false;
+  const noteConflict = () => { episodeConflict = true; };
   // Without valid metadata, require a complete primary heading corroborated by a typed episode route.
   // A title pattern alone must not reclassify an article, collection or movie.
   const routeEpisode = !selected && (!data.ogType || data.ogType === 'website') &&
     (data.headingCount === undefined || data.headingCount === 1) && episodePath(data.pathname)?.nested &&
-    episodePattern(data.heading) ? episodeFromPage(data,[], '', '') : null;
+    episodePattern(data.heading) ? episodeFromPage(data,[], '', '',noteConflict) : null;
   const type = selected?.type || ogType || (routeEpisode ? 'episode' : '');
   if (!type) {
     const title = normalizeText(data.untypedTitle);
-    return !items.length && isValidTitle(title) ? {...empty,title,titles:[title],sourceKey:'sourceHeading',source:'Page heading'} : empty;
+    return !items.length && isValidTitle(title) ? {...empty,title,titles:[title],sourceKey:'sourceHeading',source:'Page heading'} :
+      fail(episodeConflict ? 'detectEpisodeConflict' : data.invalidMetadata ? 'detectMetadataUnavailable' : 'detectNoMedia');
   }
   const movie = type === 'episode' ? selected?.series : selected;
   const sameTitle = (left, right) => cleanTitle(left).toLocaleLowerCase('tr') === cleanTitle(right).toLocaleLowerCase('tr');
@@ -489,11 +498,11 @@ function detectMedia(data) {
     if (hasAlternateHeading || !titles.length) add(data.heading);
     if (!titles.length) add(data.ogTitle);
     if (!titles.length) add(data.pageTitle);
-    if (!titles.length) return empty;
+    if (!titles.length) return fail('detectTitleMissing');
   }
   let season = episodeNumber(selected?.season, true);
   let episode = episodeNumber(selected?.episode);
-  const pageEpisode = type === 'episode' ? episodeFromPage(data, titles, season, episode) : null;
+  const pageEpisode = type === 'episode' ? episodeFromPage(data, titles, season, episode,noteConflict) : null;
   if (pageEpisode) {
     if (!titles.length) add(pageEpisode.title);
     season ||= pageEpisode.season;
@@ -501,21 +510,24 @@ function detectMedia(data) {
   }
   const identityUrls = type === 'movie' && movie ? [movie.url, ...(movie.sameAs || [])] : [];
   const ids = [...new Set(identityUrls.map(imdbIdFromUrl).filter(Boolean))];
+  let identityConflict = ids.length > 1;
   // Typed metadata binds each identity to its own work. Never reuse an episode ID for its series.
   const uniqueId = item => {
     const values = item ? [item.id,item.url,...(item.sameAs || [])] : [];
     const found = [...new Set(values.map(imdbIdFromUrl).filter(Boolean))];
+    if (found.length > 1) identityConflict = true;
     return found.length === 1 ? found[0] : '';
   };
   const seriesImdbId = type === 'series' || type === 'episode' ? uniqueId(movie) : '';
   const episodeImdbId = type === 'episode' ? uniqueId(selected) : '';
+  if (seriesImdbId && seriesImdbId === episodeImdbId) identityConflict = true;
   const headingYear = normalizeText(hasAlternateHeading ? data.alternateHeading : data.heading).match(/\(((?:18|19|20|21)\d{2})\)\s*$/)?.[1];
   const dateYear = (type === 'episode' ? selected?.date : movie?.date)?.match(/^((?:18|19|20|21)\d{2})(?:-|$)/)?.[1];
   return { type, title:titles[0] || '', titles:titles.slice(0, 6), imdbId:ids.length === 1 ? ids[0] : '',
     seriesImdbId:seriesImdbId === episodeImdbId ? '' : seriesImdbId,
     episodeImdbId:episodeImdbId === seriesImdbId ? '' : episodeImdbId,
     year:(type === 'episode' ? '' : headingYear) || dateYear || '',
-    season, episode,
+    season, episode, issue:episodeConflict ? 'detectEpisodeConflict' : identityConflict ? 'detectIdentityConflict' : '',
     episodeTitle:type === 'episode' ? normalizeText(selected?.name || data.heading || data.ogTitle).slice(0,180) : '',
     sourceKey:hasAlternateHeading ? 'sourceAlternative' : selected ? 'sourceMetadata' : 'sourceHeading',
     source:hasAlternateHeading ? 'Alternative title on this page' : selected ? 'Media metadata' : 'Page heading' };

@@ -13,7 +13,7 @@ async function setup(options = {}) {
   nodes.mediaType.value = 'movie'; nodes.discussionScope.value = 'series'; nodes.language.value = 'en';
   const urls=[];
   let injections=0;
-  const document={documentElement:{lang:'en'},listeners:{},addEventListener(type,fn){this.listeners[type]=fn;},querySelectorAll:()=>[],getElementById:id=>nodes[id],createElement:()=>({listeners:{},addEventListener(type,fn){this.listeners[type]=fn;}})};
+  const document={documentElement:{lang:'en'},listeners:{},addEventListener(type,fn){this.listeners[type]=fn;},querySelectorAll:()=>[],getElementById:id=>nodes[id],createElement:()=>({listeners:{},focus(){this.focused=true;},addEventListener(type,fn){this.listeners[type]=fn;}})};
   const scriptCalls=[];
   const chrome={tabs:{query:async()=>options.noTab?[]:[{id:0,url:options.url||'https://example.test/film'}],create:async({url})=>{if(options.openFails) throw Error('Failed'); urls.push(url); if(options.openWait) await options.openWait;}},scripting:{executeScript:async request=>{injections++; scriptCalls.push(request); if(options.injectFails || request.world==='MAIN' && options.mainFails) throw Error('Denied'); if(request.world==='MAIN' && options.mainWait) await options.mainWait; if(options.injectWait) await options.injectWait; return options.noResults?[]:[{result:request.world==='MAIN' ? options.mainData : options.data||raw}];}}};
   chrome.i18n={getUILanguage:()=>options.browserLanguage||'en-US'};
@@ -38,7 +38,7 @@ for (const language of ['en','es','pt','it','tr']) {
     const p=await setup({language,data:{playerPage:true,player:{name:'Example Current Title'}}});
     assert.equal(p.nodes.filmTitle.value,'Example Current Title');
     assert.equal(p.nodes.mediaType.value,'');
-    assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate(language,'chooseType'));
+    assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate(language,'detectTypeMissing'));
     assert.equal(p.nodes.eksiBtn.disabled,true); assert.equal(p.nodes.letterboxdBtn.disabled,true);
     await p.click('eksiBtn'); await p.click('letterboxdBtn'); assert.equal(p.urls.length,0);
     await p.change('mediaType','movie'); await p.click('letterboxdBtn');
@@ -497,9 +497,134 @@ test('Choosing a page-provided original title changes navigation without keeping
   assert.equal(new URL(p.urls[1]).searchParams.get('q'),'Crimes of the Future');
 });
 
+for(const language of ['en','es','pt','it','tr']) test(`Title alternatives swap repeatedly without changing the interface language in ${language}`,async()=>{
+  const p=await setup({language,data:{media:[{type:'movie',name:'Müstakbel Suçlar',alternateNames:['Crimes of the Future'],sameAs:['https://imdb.com/title/tt14549466/']}]}});
+  const button=p.nodes.alternatives.children[0];
+  for(let i=0;i<4;i++){
+    const next=i%2===0?'Crimes of the Future':'Müstakbel Suçlar';
+    const previous=p.nodes.filmTitle.value;
+    button.listeners.click();
+    assert.equal(p.nodes.filmTitle.value,next); assert.equal(button.textContent,previous);
+    assert.equal(button.focused,true); assert.equal(p.nodes.alternatives.children.length,1);
+    assert.equal(p.nodes.language.value,language); assert.equal(p.nodes.mediaType.value,'movie');
+    await p.click('letterboxdBtn');
+    assert.equal(p.urls.at(-1),i%2===0?'https://letterboxd.com/search/films/Crimes%20of%20the%20Future/':'https://letterboxd.com/imdb/tt14549466/');
+  }
+  assert.deepEqual(p.writes,[]);
+});
+
+test('With three titles, the clicked option trades places with the selected title and keeps other options',async()=>{
+  const p=await setup({data:{media:[{type:'movie',name:'Primary',alternateNames:['Second','Third']}]}});
+  const buttons=p.nodes.alternatives.children;
+  buttons[1].listeners.click();
+  assert.equal(p.nodes.filmTitle.value,'Third'); assert.deepEqual(buttons.filter(b=>!b.hidden).map(b=>b.textContent),['Second','Primary']);
+  buttons[1].listeners.click();
+  assert.equal(p.nodes.filmTitle.value,'Primary'); assert.deepEqual(buttons.filter(b=>!b.hidden).map(b=>b.textContent),['Second','Third']);
+  buttons[0].listeners.click();
+  assert.equal(p.nodes.filmTitle.value,'Second'); assert.deepEqual(buttons.filter(b=>!b.hidden).map(b=>b.textContent),['Primary','Third']);
+});
+
+test('Manual input filters aliases and never presents a manually invented title as page metadata',async()=>{
+  const p=await setup({data:{media:[{type:'movie',name:'Primary',alternateNames:['Second']}]}});
+  p.input('  second  ');
+  assert.deepEqual(p.nodes.alternatives.children.filter(b=>!b.hidden).map(b=>b.textContent),['Primary']);
+  p.input('Custom');
+  assert.deepEqual(new Set(p.nodes.alternatives.children.filter(b=>!b.hidden).map(b=>b.textContent)),new Set(['Primary','Second']));
+  const last=p.nodes.alternatives.children.at(-1); last.listeners.click();
+  assert.equal(last.hidden,true);
+  assert.equal(p.nodes.alternatives.children.find(b=>!b.hidden).focused,true);
+  assert.ok(!p.nodes.alternatives.children.some(b=>b.textContent==='Custom'));
+  const count=p.nodes.filmTitle.value; last.listeners.click(); assert.equal(p.nodes.filmTitle.value,count);
+});
+
+test('Series title exchange preserves episode numbers, scope, preferences and inert page text',async()=>{
+  const p=await setup({data:{media:[{type:'episode',name:'Pilot',season:'1',episode:'2',series:{name:'Example Show',alternateNames:['<img src=x onerror=alert(1)>']}}]}});
+  await p.change('discussionScope','episode'); await p.change('episodeNumber','3','input');
+  p.nodes.alternatives.children[0].listeners.click();
+  assert.equal(p.nodes.filmTitle.value,'<img src=x onerror=alert(1)>');
+  assert.equal(p.nodes.alternatives.children[0].textContent,'Example Show');
+  assert.equal(p.nodes.mediaType.value,'episode'); assert.equal(p.nodes.seasonNumber.value,'1');
+  assert.equal(p.nodes.episodeNumber.value,'3'); assert.equal(p.nodes.discussionScope.value,'episode');
+  await p.click('eksiBtn'); assert.equal(new URL(p.urls[0]).searchParams.get('q'),'<img src=x onerror=alert(1)> 1. sezon 3. bölüm');
+  assert.deepEqual(p.writes,[]);
+});
+
 
 const imdbEpisodeData={media:[{type:'episode',name:'Pilot',season:'1',episode:'1',sameAs:['https://www.imdb.com/title/tt0959621/'],series:{name:'Breaking Bad',sameAs:['https://www.imdb.com/title/tt0903747/']}}]};
 const imdbSettings={version:2,enabled:['imdb','letterboxd'],order:['imdb','eksi','reddit','letterboxd']};
+
+for(const language of ['en','es','pt','it','tr']) test(`Detection explanations are actionable, localized and update after correction in ${language}`,async()=>{
+  const cases=[
+    [{media:[{type:'movie',name:'A'},{type:'movie',name:'B'}]},'detectAmbiguous'],
+    [{playerPage:true,player:null},'detectPlayerMissing'],
+    [{playerPage:true,playerConflict:true},'detectPlayerConflict'],
+    [{youtube:{id:'AbCdEfG1234',name:'A',conflict:true}},'detectVideoConflict'],
+    [{youtube:{id:'AbCdEfG1234',name:''}},'detectVideoMissing'],
+    [{invalidMetadata:true},'detectMetadataUnavailable'],
+    [{},'detectNoMedia'],
+    [{media:[{type:'movie'}]},'detectTitleMissing'],
+    [{media:[{type:'episode',name:'Pilot'}]},'missingSeries'],
+    [{playerPage:true,player:null,media:[{type:'episode',name:'Pilot'}]},'missingSeries'],
+    [{media:[{type:'episode',series:{name:'Show'}}]},'detectNumbersMissing'],
+    [{media:[{type:'episode',episode:'2',series:{name:'Show'}}]},'detectSeasonMissing'],
+    [{media:[{type:'episode',season:'1',series:{name:'Show'}}]},'detectEpisodeMissing'],
+    [{heading:'Other Show S01E02',media:[{type:'episode',name:'Pilot',series:{name:'Show'}}]},'detectEpisodeConflict']
+  ];
+  for(const [data,key] of cases){
+    const p=await setup({language,data});
+    assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate(language,key));
+    assert.equal(p.stored.detection,undefined); assert.equal(p.writes.length,0);
+    p.input('Manual Title'); await p.change('mediaType','movie');
+    assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate(language,'entered'));
+    await p.click('eksiBtn'); assert.equal(new URL(p.urls[0]).searchParams.get('q'),'Manual Title');
+  }
+});
+
+test('Episode explanations track individual missing or invalid fields and do not block series search',async()=>{
+  const p=await setup({data:{media:[{type:'episode',name:'Pilot',series:{name:'Show'}}]}});
+  assert.equal(p.nodes.eksiBtn.disabled,false);
+  await p.change('discussionScope','episode'); assert.equal(p.nodes.eksiBtn.disabled,true);
+  await p.change('seasonNumber','0','input'); assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('en','detectEpisodeMissing'));
+  await p.change('episodeNumber','0','input'); assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('en','detectNumbersInvalid'));
+  assert.equal(p.nodes.episodeNumber.attributes['aria-invalid'],'true');
+  await p.change('episodeNumber','2','input'); assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('en','entered'));
+  assert.equal(p.nodes.episodeNumber.attributes['aria-invalid'],'false'); assert.equal(p.nodes.eksiBtn.disabled,false);
+  p.input('..'); assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('en','detectTitleInvalid'));
+  assert.equal(p.nodes.filmTitle.attributes['aria-invalid'],'true'); assert.equal(p.nodes.eksiBtn.disabled,true);
+});
+
+test('Changing search scope or interface language does not dismiss an unresolved episode conflict',async()=>{
+  const p=await setup({data:{heading:'Other Show S01E02',media:[{type:'episode',name:'Pilot',series:{name:'Show'}}]}});
+  await p.change('discussionScope','episode');
+  assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('en','detectEpisodeConflict'));
+  await p.change('language','tr');
+  assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('tr','detectEpisodeConflict'));
+  await p.change('seasonNumber','1','input');
+  assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('tr','detectEpisodeMissing'));
+});
+
+test('Navigation changes and conflicting IMDb IDs get explicit explanations without reusing stale identities',async()=>{
+  const moved=await setup({data:{youtube:{id:'AbCdEfG1234',name:'First'}},mainData:{id:'Zr_ONXsASgI',name:'Second'}});
+  assert.equal(moved.nodes.status.textContent,AfterWatchI18n.translate('en','detectNavigationChanged'));
+  const data={media:[{type:'movie',name:'Raw',sameAs:['https://imdb.com/title/tt4954522/','https://imdb.com/title/tt1234567/']}]};
+  const p=await setup({data,platformSettings:imdbSettings});
+  assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('en','detectIdentityConflict'));
+  await p.click('imdbBtn'); assert.equal(new URL(p.urls[0]).searchParams.get('q'),'Raw');
+  await p.change('language','tr'); assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('tr','detectIdentityConflict'));
+});
+
+test('Read and opening failures retain their actionable messages over validation hints',async()=>{
+  const read=await setup({injectFails:true}); assert.equal(read.nodes.status.textContent,AfterWatchI18n.translate('en','readFailed'));
+  read.input('Manual'); assert.equal(read.nodes.status.textContent,AfterWatchI18n.translate('en','entered'));
+  const open=await setup({openFails:true}); await open.click('eksiBtn'); assert.equal(open.nodes.status.textContent,AfterWatchI18n.translate('en','openFailed'));
+});
+
+test('Slow automatic reads cannot replace a manual correction or its explanation',async()=>{
+  let finish; const injectWait=new Promise(resolve=>{finish=resolve;});
+  const p=await setup({data:{media:[{type:'movie',name:'A'},{type:'movie',name:'B'}]},injectWait});
+  p.input('Manual'); await p.change('mediaType','series'); finish(); await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(p.nodes.filmTitle.value,'Manual'); assert.equal(p.nodes.status.textContent,AfterWatchI18n.translate('en','entered'));
+});
 test('IMDb selects the parent series or exact episode according to the chosen scope',async()=>{
   const p=await setup({data:imdbEpisodeData,platformSettings:imdbSettings});
   await p.click('imdbBtn'); assert.equal(p.urls[0],'https://www.imdb.com/title/tt0903747/');

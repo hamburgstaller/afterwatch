@@ -1,6 +1,6 @@
 # Roadmap
 
-The first three sections record work delivered in versions 1.1.0, 1.2.0 and 1.3.0; subsequent sections are future proposals.
+The first four sections record work delivered in versions 1.1.0 through 1.4.0; subsequent sections are future proposals.
 
 ## Available in 1.1.0: TV, episodes, and languages
 
@@ -21,6 +21,10 @@ MUBI's verified current-film record supplies localized and original titles witho
 Version 1.3.0 adds numeric MUBI player identity checks, separate player readers for major streaming layouts, and the observed Prime/Disney/Apple detail fixes. YouTube keeps raw upload titles and offers user-selected movie/episode title suggestions without an API or guessed season. See [STREAMING.md](STREAMING.md) for sources, evidence, and remaining authenticated/unpacked manual checks. Nested episode routes can corroborate a complete primary heading even without usable metadata.
 
 Settings also lets users show/hide and reorder all four destinations, including Letterboxd and IMDb. IMDb supports movies, series and episodes with separate typed identities and title-search fallback. New installs enable it; upgrades retain saved choices with IMDb off. A versioned local preference preserves order and visibility, with migration from older settings. No new permission is required.
+
+## Available in 1.4.0: branding, detection explanations and title exchange
+
+Version 1.4.0 adds the AW icon and detection explanations in all five languages. Missing information, ambiguity, player/video conflicts, IMDb conflicts and navigation changes get actionable messages. Messages update after manual edits and remain visible outside the selection panel. Page-title alternatives exchange with the previous selection in the same button, preserving keyboard focus, interface language and episode fields.
 
 ## Next: detection coverage and destinations
 

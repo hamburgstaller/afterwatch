@@ -39,6 +39,7 @@ try {
 let detected = FilmTools.detectMedia({});
 let opening = false;
 let edited = false;
+let detectionCorrected = false;
 let language = browserLanguage;
 let languageRevision = 0;
 let languageSaveFailed = false;
@@ -50,6 +51,8 @@ let preferencesReady = false;
 let saveQueue = Promise.resolve();
 let statusKey = 'reading';
 const suggestionRenderers = [];
+const alternativeButtons = [];
+let alternativeTitles = [];
 
 const t = (key, params) => AfterWatchI18n.translate(language,key,params);
 function currentTitle() { return FilmTools.normalizeText(titleInput.value); }
@@ -67,7 +70,27 @@ function validDiscussion() {
   if (!['movie','series','episode'].includes(typeSelect.value)) return false;
   try { FilmTools.discussionQuery(currentTitle(),typeSelect.value,context()); return true; } catch { return false; }
 }
+function detectionStatus(type, validTitle, validType, season, episode) {
+  if (['reading','noTab','restricted','readFailed','openFailed'].includes(statusKey)) return statusKey;
+  const issues = ['detectAmbiguous','detectEpisodeConflict','detectIdentityConflict','detectVideoConflict','detectVideoMissing','detectPlayerConflict','detectPlayerMissing','detectMetadataUnavailable','detectNoMedia','detectNavigationChanged'];
+  const issue = !detectionCorrected && issues.includes(detected.issue) ? detected.issue : '';
+  if (!validTitle) {
+    if (currentTitle()) return 'detectTitleInvalid';
+    if (issue) return issue;
+    return type === 'episode' ? 'missingSeries' : 'detectTitleMissing';
+  }
+  if (!validType) return 'detectTypeMissing';
+  if (issue === 'detectEpisodeConflict') return issue;
+  if (type === 'episode') {
+    if (String(seasonInput.value).trim() && season === '' || String(episodeInput.value).trim() && episode === '') return 'detectNumbersInvalid';
+    if (season === '' && episode === '') return 'detectNumbersMissing';
+    if (season === '') return 'detectSeasonMissing';
+    if (episode === '') return 'detectEpisodeMissing';
+  }
+  return issue === 'detectIdentityConflict' ? issue : statusKey;
+}
 function refresh() {
+  // Explain only recognized outcomes, never page-supplied strings or guessed confidence scores.
   const type = typeSelect.value;
   const valid = FilmTools.isValidTitle(currentTitle());
   const validType = ['movie','series','episode'].includes(type);
@@ -81,6 +104,7 @@ function refresh() {
   document.getElementById('noPlatforms').hidden = !preferencesReady || enabledPlatforms.length !== 0;
   document.getElementById('destinations').hidden = enabledPlatforms.length === 0;
   renderPlatformOrder();
+  renderAlternativeTitles();
   routeEl.textContent = t(!validType ? 'chooseType' : type === 'movie' ? usesIdentity() ? 'letterboxdId' : 'letterboxdSearch' : 'letterboxdTv');
   imdbRouteEl.textContent = t(!validType ? 'chooseType' : !validDiscussion() ? 'episodeMissing' : imdbIdentity() ? 'imdbDirect' :
     type === 'episode' && scopeSelect.value === 'episode' ? 'imdbEpisodeSearch' : 'imdbSearch');
@@ -99,11 +123,41 @@ function refresh() {
   detailEl.textContent = matches ? [t(type), detected.year,
     type === 'episode' ? t('episodeDetail',{season:season || t('unknown'),episode:episode || t('unknown')}) : '',
     detected.episodeTitle, t(detected.sourceKey)].filter(Boolean).join(' · ') : '';
-  statusEl.textContent = t(valid && !validType ? 'chooseType' : statusKey);
+  statusEl.textContent = t(detectionStatus(type,valid,validType,season,episode));
+  titleInput.setAttribute('aria-invalid',String(Boolean(currentTitle() && !valid)));
+  seasonInput.setAttribute('aria-invalid',String(type === 'episode' && Boolean(String(seasonInput.value).trim()) && season === ''));
+  episodeInput.setAttribute('aria-invalid',String(type === 'episode' && Boolean(String(episodeInput.value).trim()) && episode === ''));
   languageStatusEl.hidden = !languageSaveFailed;
   languageStatusEl.textContent = languageSaveFailed ? t('languageSaveFailed') : '';
   settingsStatusEl.hidden = !platformSaveFailed && !preferencesLoadFailed;
   settingsStatusEl.textContent = platformSaveFailed ? t('platformSaveFailed') : preferencesLoadFailed ? t('settingsLoadFailed') : '';
+}
+function renderAlternativeTitles() {
+  // Page aliases are reversible choices. YouTube suggestions have their own type/number controls.
+  if (detected.titles.length < 2) return;
+  const key = value => FilmTools.normalizeText(value).toLocaleLowerCase('tr');
+  const available = detected.titles.filter(title => key(title) !== key(currentTitle()));
+  alternativeTitles = alternativeTitles.filter(title => available.includes(title));
+  for (const title of available) if (!alternativeTitles.includes(title)) alternativeTitles.push(title);
+  while (alternativeButtons.length < alternativeTitles.length) {
+    const index = alternativeButtons.length;
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'alternative';
+    button.addEventListener('click', () => {
+      if (button.hidden || !alternativeTitles[index]) return;
+      const previous = detected.titles.find(title => key(title) === key(currentTitle()));
+      titleInput.value = alternativeTitles[index];
+      if (previous) alternativeTitles[index] = previous;
+      else alternativeTitles.splice(index,1);
+      edited = true; detectionCorrected = true; statusKey = 'entered'; refresh();
+      (button.hidden ? alternativeButtons.find(item => !item.hidden) : button)?.focus();
+    });
+    alternativeButtons.push(button); alternativeEl.append(button);
+  }
+  alternativeButtons.forEach((button,index) => {
+    button.hidden = index >= alternativeTitles.length;
+    button.textContent = alternativeTitles[index] || '';
+  });
 }
 function renderPlatformOrder() {
   const key = platformOrder.join(',');
@@ -131,7 +185,7 @@ function applyLanguage() {
   refresh();
 }
 for (const [node,event] of [[titleInput,'input'],[typeSelect,'change'],[scopeSelect,'change'],[seasonInput,'input'],[episodeInput,'input']]) {
-  node.addEventListener(event, () => { edited = true; statusKey = 'entered'; refresh(); });
+  node.addEventListener(event, () => { edited = true; if (node !== scopeSelect) detectionCorrected = true; statusKey = 'entered'; refresh(); });
 }
 languageSelect.addEventListener('change', () => {
   language = AfterWatchI18n.supportedLanguage(languageSelect.value);
@@ -241,7 +295,7 @@ async function run() {
       try {
         const records = await chrome.scripting.executeScript({target:{tabId:tab.id},world:'MAIN',func:FilmTools.collectYouTubePlayerData});
         const upload = records?.[0]?.result;
-        if (upload && upload.id !== data.youtube.id) data.youtube = {id:'',name:'',conflict:true};
+        if (upload && upload.id !== data.youtube.id) { data.youtube = {id:'',name:'',conflict:true}; data.navigationChanged = true; }
         else if (upload?.name) {
           if (data.youtube.name && FilmTools.normalizeText(data.youtube.name) !== FilmTools.normalizeText(upload.name)) data.youtube.conflict = true;
           else data.youtube.name = upload.name;
@@ -254,7 +308,7 @@ async function run() {
         const player = records?.[0]?.result;
         // A navigation during the read must not attach another episode's title to this page.
         if (player && player.pathname === data.pathname) data.player = player;
-        else if (player) { data.player = null; data.media = []; }
+        else if (player) { data.player = null; data.media = []; data.navigationChanged = true; }
       } catch { /* DOM/browser metadata and manual entry remain usable. */ }
     }
     if (edited) { statusKey = 'entered'; return; }
@@ -264,14 +318,6 @@ async function run() {
     seasonInput.value = detected.season;
     episodeInput.value = detected.episode;
     statusKey = detected.title && !detected.type ? 'chooseType' : detected.type === 'episode' && !detected.title ? 'missingSeries' : detected.title ? 'check' : 'manual';
-    for (const title of detected.titles.filter(value => value !== detected.title)) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'alternative';
-      button.textContent = title;
-      button.addEventListener('click', () => { titleInput.value = title; edited = true; statusKey = 'entered'; refresh(); });
-      alternativeEl.append(button);
-    }
     const suggestions = detected.suggestions || [];
     if (suggestions.length) {
       const label = document.createElement('p');
@@ -284,7 +330,7 @@ async function run() {
       render(); suggestionRenderers.push(render);
       original.addEventListener('click', () => {
         titleInput.value = detected.title; typeSelect.value = ''; seasonInput.value = ''; episodeInput.value = '';
-        edited = true; statusKey = 'chooseType'; refresh();
+        edited = true; detectionCorrected = true; statusKey = 'chooseType'; refresh();
       });
       alternativeEl.append(original);
     }
@@ -297,7 +343,7 @@ async function run() {
       button.addEventListener('click', () => {
         titleInput.value = suggestion.title; typeSelect.value = suggestion.type;
         seasonInput.value = suggestion.season; episodeInput.value = suggestion.episode;
-        edited = true; statusKey = 'check'; refresh();
+        edited = true; detectionCorrected = true; statusKey = 'check'; refresh();
       });
       // Store a local renderer for language changes without putting page strings in HTML or attributes.
       suggestionRenderers.push(() => { button.textContent = label(); });

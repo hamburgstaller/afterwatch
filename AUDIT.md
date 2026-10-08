@@ -1,4 +1,16 @@
-# Release review — AfterWatch 1.3.0
+# Release review — AfterWatch 1.4.0
+
+Reviewed and approved for publication by the project owner on October 8, 2026. Manifest and package both identify version 1.4.0. This release combines the selected AW artwork, clearer detection explanations and reversible page-title alternatives.
+
+The collector returns bounded diagnostic flags for unreadable metadata and conflicting player identity; the detector returns recognized reason codes for ambiguity, missing player/video titles, episode/IMDb conflicts and navigation changes. Codes stay in popup memory. The UI explains missing/invalid fields, preserves read/open failure messages, updates after corrections and language changes, and uses accessible invalid-field states. Changing search scope or interface language does not dismiss unresolved conflicts. No new permissions, external lookup, raw error reporting, telemetry or persisted diagnostics are added.
+
+188 Node tests pass. Native Chrome validation covers invalid JSON-LD collection, 195 outcome/visibility/layout combinations across five languages and correction flows in each language. Explanations remain outside the scrolling selection panel, the popup stays within 600px, and no application errors were reported. The Turkish conflict screenshot was visually inspected. These tests simulate Chrome APIs; actual unpacked loading, authenticated streaming layouts and Edge remain separate manual checks. Icon exports and metadata/syntax checks are also verified.
+
+Selecting a page alias swaps the previous selection into the clicked button; other aliases and media fields remain intact. Button reuse preserves keyboard focus, manually entered text is not presented as page metadata, and YouTube suggestion/restoration controls retain their existing behavior. Ten additional native Chrome popup scenarios across five languages pass repeated swaps, Enter/Space activation, focus, correct destination routes, preference preservation and popup bounds. The English exchange screenshot was visually inspected.
+
+---
+
+# Archived release review — AfterWatch 1.3.0
 
 Reviewed and approved for publication by the project owner on October 6, 2026. Manifest and package both identify version 1.3.0. This release combines playback and YouTube detection, nested episode fallback, platform ordering and IMDb support.
 

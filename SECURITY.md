@@ -2,6 +2,7 @@
 
 ## Current boundaries
 
+- Detection explanations render only bundled, recognized messages via textContent. Parsing errors contribute a boolean rather than raw error text; page data cannot inject a message. Diagnostic codes are not stored or sent externally. Existing title, type, episode and destination validation still governs navigation.
 - Manifest V3 with `activeTab`, `scripting`, and `storage` permissions. Storage is used only for local language and platform visibility/order preferences.
 - No remote scripts, runtime dependencies, `eval`, `innerHTML`, or background service. Translations are bundled as a local script.
 - Page titles are untrusted text. The popup uses `textContent` and input `value`; destination URLs encode the selected title.

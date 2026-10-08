@@ -37,6 +37,9 @@ select { margin-bottom: 12px; }
 .order-button:not(:disabled):hover { background: #303943; }
 .order-button:disabled { opacity: .35; cursor: not-allowed; }
 .destinations:empty { display: none; }
+#watchPanel { display: flex; flex-direction: column; max-height: 430px; }
+#watchPanel .film-card, #status, #noPlatforms { flex-shrink: 0; }
+#watchPanel .destinations { min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 3px; }
 .many-platforms .film-card { max-height: 140px; }
 .many-platforms .destinations { max-height: 275px; overflow-y: auto; scrollbar-gutter: stable; padding: 3px; }
 .four-platforms .destination { min-width: 0; }

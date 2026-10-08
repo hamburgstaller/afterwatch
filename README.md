@@ -1,3 +1,5 @@
+<img src="icons/icon-128.png" alt="AfterWatch AW icon" width="80" height="80">
+
 # AfterWatch
 
 **You've watched it. Now join the conversation.**
@@ -6,7 +8,9 @@ A small browser extension that takes you from a movie, series, or episode page t
 
 [Download the extension](https://github.com/hamburgstaller/afterwatch/releases/latest) · [Source and issues](https://github.com/hamburgstaller/afterwatch)
 
-Version 1.3.0 adds IMDb, platform ordering, optional Letterboxd, playback detection and YouTube title suggestions. The interface supports English, Spanish, Portuguese, Italian and Turkish. Shared live rooms remain a future idea, documented in [ROADMAP.md](ROADMAP.md).
+Version **1.4.0** adds the AW brand icon, clearer detection explanations and reversible title alternatives. The interface supports English, Spanish, Portuguese, Italian and Turkish. Shared live rooms remain a future idea, documented in [ROADMAP.md](ROADMAP.md).
+
+The popup distinguishes missing information from conflicting information and explains which fields to correct. These messages remain visible outside the scrolling selection panel, update after edits, and are available in all five languages.
 
 ## Features
 
@@ -15,6 +19,7 @@ Version 1.3.0 adds IMDb, platform ordering, optional Letterboxd, playback detect
 - Reads MUBI's embedded current-film record only when its slug and title match the film page and heading. Keeps the page's localized title first and offers its supplied original title as a selectable alternative. The original title is not necessarily English; no translation or external title lookup is performed.
 - Preserves numbers and meaningful parentheses in titles, including `1917`, `Blade Runner 2049`, and `12 Angry Men`.
 - Lets you edit the title, choose the content type, or select another title found on the page.
+- Makes page-title alternatives reversible: selecting an alias exchanges it with the previous selected title in the same button. Interface language and episode fields are preserved. Manually typed custom text is not added as a page-provided alias.
 - Lets you show or hide platforms in Settings. Letterboxd and IMDb are optional, and up/down arrows to arrange all four platforms. Letterboxd is enabled by default; new installations also enable IMDb. Existing saved selections and order are retained, with IMDb initially off on upgrades. Disabled platforms keep their position. Only supported destinations can be enabled; custom site URLs are not supported.
 - Describes each platform's audience and language in Settings. These labels describe the destination, not the user's detected country.
 - Keeps a series title separate from an episode title and its season/episode numbers. Reads Review itemReviewed metadata only when the reviewed item's URL identifies the active page.
@@ -50,7 +55,7 @@ No build step, Node.js installation, API key, account, or dependency installatio
 7. Choose an enabled platform. Change the interface language using the selector beside the name.
 8. Open the gear button for Settings. Enable or disable any of the four platforms and use its up/down arrows to change the order. Use Back or Escape to return. Your selected title and episode numbers are preserved.
 
-If already installed from this directory, click **Reload** after updating it. The extension card should show version **1.3.0**. The `storage` permission, added in 1.1.0, now saves local language and platform preferences. No new permission is required.
+If already installed from this directory, click **Reload** after updating it. Confirm version **1.4.0** and the AW icon. GitHub releases do not automatically update unpacked extensions. The `storage` permission, added in 1.1.0, saves local language and platform preferences. No new permission is required.
 
 Chrome 111 or later is required. Automated popup and actual DOM extraction checks run in Chrome; unpacked-extension loading and permissions still need a quick manual check after reloading. Edge uses compatible Chromium APIs but has not been independently tested here. Firefox and Safari are not currently verified.
 
@@ -95,6 +100,10 @@ npm run preview
 The preview runs at `http://127.0.0.1:4173/`. It simulates Chrome APIs and prints destination URLs instead of opening real tabs. It does not read your active browser page. Scenarios: `?scenario=raw`, `numeric`, `series`, `episode`, `episode-heading`, `missing-series`, `generic`, `protected`, `error`, and `hostile`. The preview stores separate local language and platform preferences.
 
 Additional popup preview scenarios are `?scenario=youtube-movie`, `youtube-episode`, and `youtube-partial`. These simulate video data rather than reading YouTube. `?scenario=episode-nested` demonstrates the complete-heading/nested-route fallback with no usable metadata. `?scenario=imdb-series` and `imdb-episode` demonstrate series/episode identity navigation using synthetic metadata. Enable IMDb in Settings if upgrading existing preview preferences. For real extension testing, open `/fixtures/series`, `/fixtures/episode`, or `/fixtures/episode-heading` on that server and click the unpacked extension. These synthetic pages contain media metadata and no video or catalog integration.
+
+The `?scenario=title-swap` preview demonstrates reversible page-title aliases.
+
+Detection explanation previews include `?scenario=ambiguous`, `player-missing`, `player-conflict`, `metadata-unreadable`, `episode-conflict`, `missing-numbers`, and `identity-conflict`. These are synthetic outcomes, not live platform diagnostics.
 
 Real extension loading and permission checks are separate from the preview and automated tests. See [AUDIT.md](AUDIT.md) for validation evidence and remaining checks.
 

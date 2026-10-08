@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0 — 2026-10-08
+
+- Exchange selected and alternative page titles in place. The clicked option becomes the previous selected title, supports repeated switching and keeps keyboard focus. Other aliases and manually entered episode fields are preserved; typed custom text is not represented as page-provided metadata. YouTube's separate suggestion/restoration flow is retained.
+- Explain ambiguous media, unavailable player/video titles, unreadable metadata, conflicting episode/IMDb information and content changes during extraction. Keep actionable explanations visible outside the scrolling selection panel in all five languages.
+- Identify missing title/type/season/episode fields and invalid numeric ranges. Refresh explanations after manual correction, preserve read/open failure messages, and expose invalid fields accessibly. Series search remains available without episode numbers.
+- Keep diagnostic reasons in popup memory only. No guessed confidence percentage, external catalog verification, telemetry, saved diagnostic history or new permission is introduced.
+- Add the selected mint AW monogram with a play triangle inside the A. Include its editable, font-independent SVG source and 16, 32, 48 and 128 pixel PNG exports.
+- Set the extension and toolbar icons in the manifest and display the same mark in the README. The icon adds no permission or behavior changes.
+
 ## 1.3.0 — 2026-10-06
 
 - Detect episodes when a single primary heading agrees with a nested series/season/episode route, even if JSON-LD is malformed and Open Graph is absent. Keep conflicts, articles, movies and incomplete labels out of this fallback. Clean Turkish dotted-I watch suffixes without changing meaningful title words. No title/ID/year is guessed from malformed data.
